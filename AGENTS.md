@@ -32,26 +32,26 @@ burl/
 
 ## WHERE TO LOOK
 
-| Task | Location | Notes |
-|------|----------|-------|
-| Add CLI flag | `packages/cli/src/cli.ts` | Uses `cleye` library |
-| Add output format | `packages/cli/src/output/export/` | Follow existing pattern |
-| Modify benchmark logic | `packages/cli/src/core/engine.ts` | Worker pool pattern |
-| Add latency metric | `packages/cli/src/stats/` | collector.ts + types.ts |
-| Change TUI display | `packages/cli/src/output/tui/` | React components |
-| Add LLM interpretation | `packages/cli/src/output/export/llm.ts` | analyzeResult() |
+| Task                   | Location                                | Notes                   |
+| ---------------------- | --------------------------------------- | ----------------------- |
+| Add CLI flag           | `packages/cli/src/cli.ts`               | Uses `cleye` library    |
+| Add output format      | `packages/cli/src/output/export/`       | Follow existing pattern |
+| Modify benchmark logic | `packages/cli/src/core/engine.ts`       | Worker pool pattern     |
+| Add latency metric     | `packages/cli/src/stats/`               | collector.ts + types.ts |
+| Change TUI display     | `packages/cli/src/output/tui/`          | React components        |
+| Add LLM interpretation | `packages/cli/src/output/export/llm.ts` | analyzeResult()         |
 
 ## CODE MAP
 
-| Symbol | Type | Location | Role |
-|--------|------|----------|------|
-| `BenchmarkEngine` | Class | `core/engine.ts` | Orchestrates worker pool, progress callbacks |
-| `StatsCollector` | Class | `stats/collector.ts` | HDR histogram, percentile calculations |
-| `makeRequest` | Function | `core/http-client.ts` | Single request with Bun.nanoseconds() timing |
-| `BenchmarkConfig` | Interface | `core/types.ts` | Runtime config after CLI parsing |
-| `CliOptions` | Interface | `core/types.ts` | Raw CLI args before transformation |
-| `BenchmarkResult` | Interface | `stats/types.ts` | Final output data structure |
-| `BenchmarkTui` | Component | `output/tui/BenchmarkTui.tsx` | Main TUI React component |
+| Symbol            | Type      | Location                      | Role                                         |
+| ----------------- | --------- | ----------------------------- | -------------------------------------------- |
+| `BenchmarkEngine` | Class     | `core/engine.ts`              | Orchestrates worker pool, progress callbacks |
+| `StatsCollector`  | Class     | `stats/collector.ts`          | HDR histogram, percentile calculations       |
+| `makeRequest`     | Function  | `core/http-client.ts`         | Single request with Bun.nanoseconds() timing |
+| `BenchmarkConfig` | Interface | `core/types.ts`               | Runtime config after CLI parsing             |
+| `CliOptions`      | Interface | `core/types.ts`               | Raw CLI args before transformation           |
+| `BenchmarkResult` | Interface | `stats/types.ts`              | Final output data structure                  |
+| `BenchmarkTui`    | Component | `output/tui/BenchmarkTui.tsx` | Main TUI React component                     |
 
 ### Module Flow
 
@@ -127,13 +127,13 @@ bun run docs:generate             # Static site generation
 
 ## TOOLS
 
-| Tool | Purpose | Config |
-|------|---------|--------|
-| `oxlint` | Linting | `.oxlintrc.json` - strict, many plugins |
-| `oxfmt` | Formatting | `.oxfmtrc.json` |
-| `tsgo` | Type checking | Native TS compiler (faster than tsc) |
-| `cleye` | CLI parsing | Flag definitions in cli.ts |
-| `@opentui/react` | TUI framework | React-based terminal UI |
+| Tool             | Purpose       | Config                                  |
+| ---------------- | ------------- | --------------------------------------- |
+| `oxlint`         | Linting       | `.oxlintrc.json` - strict, many plugins |
+| `oxfmt`          | Formatting    | `.oxfmtrc.json`                         |
+| `tsgo`           | Type checking | Native TS compiler (faster than tsc)    |
+| `cleye`          | CLI parsing   | Flag definitions in cli.ts              |
+| `@opentui/react` | TUI framework | React-based terminal UI                 |
 
 ## NOTES
 
@@ -143,4 +143,3 @@ bun run docs:generate             # Static site generation
 - **HTTP/3**: Flag exists (`--http3`) but marked experimental
 - **Exit codes**: Non-zero if any requests failed (`result.failedRequests > 0`)
 - **TUI detection**: `shouldUseTui()` checks TTY, `--no-tui`, `--quiet`, export modes
-

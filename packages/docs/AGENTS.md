@@ -25,12 +25,12 @@ docs/
 
 ## WHERE TO LOOK
 
-| Task | File | Notes |
-|------|------|-------|
-| Add doc page | `content/{section}/` | Prefix with number for ordering |
-| Change page layout | `app/pages/[...slug].vue` | Uses UPage, UPageHeader |
-| Add content collection | `content.config.ts` | Define schema with Zod |
-| Add OG image | `nuxt.config.ts` | `ogImage.defaults` |
+| Task                   | File                      | Notes                           |
+| ---------------------- | ------------------------- | ------------------------------- |
+| Add doc page           | `content/{section}/`      | Prefix with number for ordering |
+| Change page layout     | `app/pages/[...slug].vue` | Uses UPage, UPageHeader         |
+| Add content collection | `content.config.ts`       | Define schema with Zod          |
+| Add OG image           | `nuxt.config.ts`          | `ogImage.defaults`              |
 
 ## CONVENTIONS
 
@@ -56,11 +56,11 @@ links:                    # Optional - action buttons
 
 ## MODULES
 
-| Module | Purpose |
-|--------|---------|
-| `@nuxt/content` | Markdown → Vue, SQLite content DB |
-| `@nuxt/ui` | UI components (UPage, UCard, etc.) |
-| `nuxt-og-image` | Auto-generated OG images |
+| Module          | Purpose                            |
+| --------------- | ---------------------------------- |
+| `@nuxt/content` | Markdown → Vue, SQLite content DB  |
+| `@nuxt/ui`      | UI components (UPage, UCard, etc.) |
+| `nuxt-og-image` | Auto-generated OG images           |
 
 ## COMMANDS
 

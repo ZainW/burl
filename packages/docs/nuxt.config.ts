@@ -1,52 +1,47 @@
 export default defineNuxtConfig({
-  modules: [
-    '@nuxt/image',
-    '@nuxt/ui',
-    '@nuxt/content',
-    'nuxt-og-image'
-  ],
+  modules: ["@nuxt/image", "@nuxt/ui", "@nuxt/content", "nuxt-og-image"],
 
   devtools: { enabled: true },
 
-  css: ['~/assets/css/main.css'],
+  css: ["~/assets/css/main.css"],
 
   content: {
     database: {
-      type: 'sqlite',
-      filename: '.data/content.db'
+      type: "sqlite",
+      filename: ".data/content.db",
     },
     build: {
       markdown: {
-        toc: { searchDepth: 3 }
-      }
-    }
+        toc: { searchDepth: 3 },
+      },
+    },
   },
 
   experimental: {
-    asyncContext: true
+    asyncContext: true,
   },
 
-  compatibilityDate: '2024-12-29',
+  compatibilityDate: "2024-12-29",
 
   nitro: {
     prerender: {
-      routes: ['/'],
+      routes: ["/"],
       crawlLinks: true,
-      autoSubfolderIndex: false
-    }
+      autoSubfolderIndex: false,
+    },
   },
 
   icon: {
-    provider: 'iconify'
+    provider: "iconify",
   },
 
   site: {
-    url: 'https://burl.wania.app'
+    url: "https://burl.wania.app",
   },
 
   ogImage: {
     defaults: {
-      component: 'OgImageDocs'
-    }
-  }
-})
+      component: "OgImageDocs",
+    },
+  },
+});

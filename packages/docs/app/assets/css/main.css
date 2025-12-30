@@ -7,7 +7,7 @@
   --container-8xl: 90rem;
 
   /* Inter font like Linear/Vercel */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 
   /* Custom violet palette (Linear-inspired) */
   --color-violet-50: #f5f3ff;
