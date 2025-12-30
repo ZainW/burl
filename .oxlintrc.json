@@ -1,0 +1,114 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import", "unicorn", "promise", "node"],
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "globals": {
+    "Bun": "readonly",
+    "process": "readonly",
+    "console": "readonly"
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "pedantic": "warn",
+    "perf": "warn",
+    "style": "warn"
+  },
+  "rules": {
+    "no-unused-vars": "error",
+    "no-console": "off",
+    "prefer-const": "error",
+    "no-var": "error",
+    "eqeqeq": "error",
+    "no-debugger": "error",
+    "no-empty": "warn",
+    "no-duplicate-imports": "error",
+
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unused-vars": "error",
+    "typescript/prefer-optional-chain": "warn",
+    "typescript/prefer-nullish-coalescing": "off",
+    "typescript/no-non-null-assertion": "warn",
+
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "import/no-cycle": "warn",
+    "import/first": "warn",
+    "import/group-exports": "off",
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+    "import/no-default-export": "off",
+    "import/exports-last": "off",
+
+    "func-style": "off",
+    "no-magic-numbers": "off",
+    "curly": "off",
+    "max-statements": "off",
+    "max-lines-per-function": "off",
+    "id-length": "off",
+    "sort-keys": "off",
+    "sort-imports": "off",
+    "prefer-destructuring": "off",
+    "prefer-exponentiation-operator": "off",
+    "init-declarations": "off",
+    "no-ternary": "off",
+
+    "typescript/no-inferrable-types": "off",
+
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/switch-case-braces": "off",
+    "unicorn/numeric-separators-style": "off",
+    "unicorn/catch-error-name": "off",
+    "unicorn/no-immediate-mutation": "off",
+    "unicorn/prefer-string-replace-all": "off",
+    "unicorn/escape-case": "off",
+    "unicorn/no-hex-escape": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/prefer-at": "off",
+    "unicorn/no-nested-ternary": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/prefer-top-level-await": "off",
+
+    "no-nested-ternary": "off",
+    "no-await-in-loop": "off",
+    "no-promise-executor-return": "off",
+    "max-params": "off",
+    "max-lines": "off",
+    "no-implicit-coercion": "off",
+    "prefer-template": "off",
+
+    "import/max-dependencies": "off",
+    "import/consistent-type-specifier-style": "off",
+
+    "typescript/consistent-generic-constructors": "off",
+
+    "promise/avoid-new": "off",
+    "promise/always-return": "off",
+    "promise/prefer-await-to-then": "off",
+    "promise/prefer-await-to-callbacks": "off",
+    "promise/no-multiple-resolved": "off",
+    "unicorn/no-null": "off",
+    "unicorn/filename-case": "off",
+    "unicorn/prevent-abbreviations": "off",
+    "unicorn/no-array-reduce": "off",
+    "unicorn/no-array-for-each": "off",
+
+    "promise/no-return-wrap": "error",
+    "promise/param-names": "error",
+
+    "node/no-deprecated-api": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.spec.ts", "**/test/**/*.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "no-console": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/", "node_modules/", "*.d.ts"]
+}
