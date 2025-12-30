@@ -1,23 +1,23 @@
-import { createCliRenderer, type CliRenderer } from '@opentui/core'
-import { createRoot } from '@opentui/react'
-import type { BenchmarkResult, StatsSnapshot } from '../../stats/types'
+import { createCliRenderer, type CliRenderer } from "@opentui/core";
+import { createRoot } from "@opentui/react";
+import type { BenchmarkResult, StatsSnapshot } from "../../stats/types";
 import {
   BenchmarkTui,
   updateTuiState,
   getTuiState,
   resetTuiState,
   appendMetricHistory,
-} from './BenchmarkTui'
+} from "./BenchmarkTui";
 
-let renderer: CliRenderer | null = null
-let root: ReturnType<typeof createRoot> | null = null
+let renderer: CliRenderer | null = null;
+let root: ReturnType<typeof createRoot> | null = null;
 
 interface TuiCallbacks {
-  onStop?: () => void
-  onRerun?: () => void
-  onExport?: (format: 'json' | 'csv' | 'markdown') => void
-  onQuit?: () => void
-  onUpdateConnections?: (connections: number) => void
+  onStop?: () => void;
+  onRerun?: () => void;
+  onExport?: (format: "json" | "csv" | "markdown") => void;
+  onQuit?: () => void;
+  onUpdateConnections?: (connections: number) => void;
 }
 
 export async function initTui(
@@ -25,17 +25,17 @@ export async function initTui(
   method: string,
   connections: number,
   duration: number | undefined,
-  callbacks: TuiCallbacks
+  callbacks: TuiCallbacks,
 ): Promise<void> {
   renderer = await createCliRenderer({
     exitOnCtrlC: false,
-  })
+  });
 
-  root = createRoot(renderer)
+  root = createRoot(renderer);
 
   updateTuiState({
-    phase: 'idle',
-    view: 'overview',
+    phase: "idle",
+    view: "overview",
     url,
     method,
     connections,
@@ -44,49 +44,49 @@ export async function initTui(
     snapshot: undefined,
     result: undefined,
     exportMessage: undefined,
-    editInput: '',
+    editInput: "",
     ...callbacks,
-  })
+  });
 
-  root.render(<BenchmarkTui />)
+  root.render(<BenchmarkTui />);
 }
 
 export function tuiSetWarmup(): void {
-  updateTuiState({ phase: 'warmup' })
+  updateTuiState({ phase: "warmup" });
 }
 
 export function tuiSetRunning(): void {
-  resetTuiState()
-  updateTuiState({ phase: 'running' })
+  resetTuiState();
+  updateTuiState({ phase: "running" });
 }
 
 export function tuiUpdateProgress(snapshot: StatsSnapshot, progress: number): void {
-  appendMetricHistory(snapshot)
-  updateTuiState({ snapshot, progress })
+  appendMetricHistory(snapshot);
+  updateTuiState({ snapshot, progress });
 }
 
 export function tuiSetComplete(result: BenchmarkResult): void {
-  updateTuiState({ phase: 'complete', result, progress: 1 })
+  updateTuiState({ phase: "complete", result, progress: 1 });
 }
 
 export function tuiSetExportMessage(message: string): void {
-  updateTuiState({ exportMessage: message })
+  updateTuiState({ exportMessage: message });
 }
 
 export function tuiUpdateConnections(connections: number): void {
-  updateTuiState({ connections, editInput: '' })
+  updateTuiState({ connections, editInput: "" });
 }
 
 export function tuiDestroy(): void {
   if (renderer) {
-    renderer.destroy()
-    renderer = null
-    root = null
+    renderer.destroy();
+    renderer = null;
+    root = null;
   }
 }
 
 export function isTuiActive(): boolean {
-  return renderer !== null
+  return renderer !== null;
 }
 
-export { updateTuiState, getTuiState, resetTuiState }
+export { updateTuiState, getTuiState, resetTuiState };
