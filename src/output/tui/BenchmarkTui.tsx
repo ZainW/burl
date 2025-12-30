@@ -86,7 +86,7 @@ export function appendMetricHistory(snapshot: StatsSnapshot) {
   const h = globalState.history
   const total = snapshot.successfulRequests + snapshot.failedRequests
   const successRate = total > 0 ? (snapshot.successfulRequests / total) * 100 : 100
-  
+
   globalState.history = {
     rps: [...h.rps, snapshot.currentRps],
     latencyP50: [...h.latencyP50, snapshot.latencyP50],
@@ -99,36 +99,51 @@ export function appendMetricHistory(snapshot: StatsSnapshot) {
 
 function useTuiState(): TuiState {
   const [state, setState] = useState(globalState)
-  
+
   useEffect(() => {
     const listener = () => setState({ ...globalState })
     listeners.add(listener)
-    return () => { listeners.delete(listener) }
+    return () => {
+      listeners.delete(listener)
+    }
   }, [])
-  
+
   return state
 }
 
 const SPARKLINE_CHARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
 
-function Sparkline({ values, width = 50, color = '#7aa2f7', label }: { 
-  values: number[], width?: number, color?: string, label?: string 
+function Sparkline({
+  values,
+  width = 50,
+  color = '#7aa2f7',
+  label,
+}: {
+  values: number[]
+  width?: number
+  color?: string
+  label?: string
 }) {
   if (values.length === 0) return <text fg="#565f89">Collecting data...</text>
-  
+
   const recent = values.slice(-width)
   const min = Math.min(...recent)
   const max = Math.max(...recent)
   const range = max - min || 1
-  
-  const sparkline = recent.map(v => {
-    const normalized = (v - min) / range
-    const index = Math.min(Math.floor(normalized * SPARKLINE_CHARS.length), SPARKLINE_CHARS.length - 1)
-    return SPARKLINE_CHARS[index]
-  }).join('')
-  
+
+  const sparkline = recent
+    .map(v => {
+      const normalized = (v - min) / range
+      const index = Math.min(
+        Math.floor(normalized * SPARKLINE_CHARS.length),
+        SPARKLINE_CHARS.length - 1
+      )
+      return SPARKLINE_CHARS[index]
+    })
+    .join('')
+
   const curr = recent[recent.length - 1] ?? 0
-  
+
   return (
     <box flexDirection="column">
       {label && <text fg="#7dcfff">{label}</text>}
@@ -155,15 +170,27 @@ function formatValue(value: number, label?: string): string {
   return value.toFixed(1)
 }
 
-function ProgressBar({ progress, width = 40 }: { progress: number, width?: number }) {
+function ProgressBar({ progress, width = 40 }: { progress: number; width?: number }) {
   const filled = Math.round(progress * width)
   const empty = width - filled
   const bar = '█'.repeat(filled) + '░'.repeat(empty)
   const pct = Math.round(progress * 100)
-  return <text fg="#7aa2f7">{bar} {pct}%</text>
+  return (
+    <text fg="#7aa2f7">
+      {bar} {pct}%
+    </text>
+  )
 }
 
-function Header({ url, method, connections }: { url: string, method: string, connections: number }) {
+function Header({
+  url,
+  method,
+  connections,
+}: {
+  url: string
+  method: string
+  connections: number
+}) {
   return (
     <box flexDirection="column" marginBottom={1}>
       <text>
@@ -172,7 +199,9 @@ function Header({ url, method, connections }: { url: string, method: string, con
       </text>
       <text>
         <span fg="#7dcfff">Target: </span>
-        <span fg="#c0caf5">{method} {url}</span>
+        <span fg="#c0caf5">
+          {method} {url}
+        </span>
       </text>
       <text>
         <span fg="#7dcfff">Connections: </span>
@@ -182,14 +211,14 @@ function Header({ url, method, connections }: { url: string, method: string, con
   )
 }
 
-function TabBar({ currentView, phase }: { currentView: MetricView, phase: Phase }) {
-  const tabs: { key: string, view: MetricView, label: string }[] = [
+function TabBar({ currentView, phase: _phase }: { currentView: MetricView; phase: Phase }) {
+  const tabs: { key: string; view: MetricView; label: string }[] = [
     { key: '1', view: 'overview', label: 'Overview' },
     { key: '2', view: 'rps', label: 'RPS' },
     { key: '3', view: 'latency', label: 'Latency' },
     { key: '4', view: 'throughput', label: 'Throughput' },
   ]
-  
+
   return (
     <box flexDirection="row" gap={1} marginBottom={1}>
       {tabs.map(tab => (
@@ -204,7 +233,7 @@ function TabBar({ currentView, phase }: { currentView: MetricView, phase: Phase 
   )
 }
 
-function StatsTable({ rows }: { rows: { label: string, value: string, color?: string }[] }) {
+function StatsTable({ rows }: { rows: { label: string; value: string; color?: string }[] }) {
   return (
     <box flexDirection="column">
       {rows.map((row, i) => (
@@ -217,163 +246,263 @@ function StatsTable({ rows }: { rows: { label: string, value: string, color?: st
   )
 }
 
-function OverviewView({ snapshot, history, result }: { 
-  snapshot?: StatsSnapshot, history: MetricHistory, result?: BenchmarkResult 
+function OverviewView({
+  snapshot,
+  history,
+  result,
+}: {
+  snapshot?: StatsSnapshot
+  history: MetricHistory
+  result?: BenchmarkResult
 }) {
   const data = result || snapshot
   if (!data) return <text fg="#565f89">Waiting for data...</text>
-  
+
   const isComplete = !!result
-  
+
   return (
     <box flexDirection="column">
       <box flexDirection="row" gap={4}>
         <box flexDirection="column">
           <text fg="#7dcfff">Requests</text>
-          <StatsTable rows={[
-            { label: 'Total', value: (result?.totalRequests ?? snapshot?.totalRequests ?? 0).toLocaleString() },
-            { label: 'Success', value: (result?.successfulRequests ?? snapshot?.successfulRequests ?? 0).toLocaleString(), color: '#9ece6a' },
-            { label: 'Failed', value: (result?.failedRequests ?? snapshot?.failedRequests ?? 0).toLocaleString(), color: (result?.failedRequests ?? snapshot?.failedRequests ?? 0) > 0 ? '#f7768e' : '#565f89' },
-            { label: 'RPS', value: (result?.requestsPerSecond ?? snapshot?.currentRps ?? 0).toFixed(1) },
-          ]} />
+          <StatsTable
+            rows={[
+              {
+                label: 'Total',
+                value: (result?.totalRequests ?? snapshot?.totalRequests ?? 0).toLocaleString(),
+              },
+              {
+                label: 'Success',
+                value: (
+                  result?.successfulRequests ??
+                  snapshot?.successfulRequests ??
+                  0
+                ).toLocaleString(),
+                color: '#9ece6a',
+              },
+              {
+                label: 'Failed',
+                value: (result?.failedRequests ?? snapshot?.failedRequests ?? 0).toLocaleString(),
+                color:
+                  (result?.failedRequests ?? snapshot?.failedRequests ?? 0) > 0
+                    ? '#f7768e'
+                    : '#565f89',
+              },
+              {
+                label: 'RPS',
+                value: (result?.requestsPerSecond ?? snapshot?.currentRps ?? 0).toFixed(1),
+              },
+            ]}
+          />
         </box>
-        
+
         <box flexDirection="column">
           <text fg="#7dcfff">Latency</text>
-          <StatsTable rows={[
-            { label: 'P50', value: formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0) },
-            { label: 'P99', value: formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0) },
-            { label: 'Mean', value: formatLatency(result?.latency.mean ?? 0) },
-            { label: 'Max', value: formatLatency(result?.latency.max ?? 0) },
-          ]} />
+          <StatsTable
+            rows={[
+              {
+                label: 'P50',
+                value: formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0),
+              },
+              {
+                label: 'P99',
+                value: formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0),
+              },
+              { label: 'Mean', value: formatLatency(result?.latency.mean ?? 0) },
+              { label: 'Max', value: formatLatency(result?.latency.max ?? 0) },
+            ]}
+          />
         </box>
-        
+
         <box flexDirection="column">
           <text fg="#7dcfff">Data</text>
-          <StatsTable rows={[
-            { label: 'Total', value: formatBytes(result?.totalBytes ?? 0) },
-            { label: 'Throughput', value: formatThroughput(result?.bytesPerSecond ?? 0) },
-            { label: 'Duration', value: formatDuration(result?.durationMs ?? snapshot?.elapsedMs ?? 0) },
-          ]} />
+          <StatsTable
+            rows={[
+              { label: 'Total', value: formatBytes(result?.totalBytes ?? 0) },
+              { label: 'Throughput', value: formatThroughput(result?.bytesPerSecond ?? 0) },
+              {
+                label: 'Duration',
+                value: formatDuration(result?.durationMs ?? snapshot?.elapsedMs ?? 0),
+              },
+            ]}
+          />
         </box>
       </box>
-      
+
       {history.rps.length > 1 && (
         <box flexDirection="column" marginTop={1}>
           <Sparkline values={history.rps} label="RPS Trend" color="#9ece6a" />
         </box>
       )}
-      
-      {isComplete && result && <StatusCodes statusCodes={result.statusCodes} total={result.totalRequests} />}
+
+      {isComplete && result && (
+        <StatusCodes statusCodes={result.statusCodes} total={result.totalRequests} />
+      )}
     </box>
   )
 }
 
-function RpsView({ snapshot, history, result }: { 
-  snapshot?: StatsSnapshot, history: MetricHistory, result?: BenchmarkResult 
+function RpsView({
+  snapshot,
+  history,
+  result,
+}: {
+  snapshot?: StatsSnapshot
+  history: MetricHistory
+  result?: BenchmarkResult
 }) {
   const currentRps = result?.requestsPerSecond ?? snapshot?.currentRps ?? 0
-  const avgRps = history.rps.length > 0 
-    ? history.rps.reduce((a, b) => a + b, 0) / history.rps.length 
-    : 0
+  const avgRps =
+    history.rps.length > 0 ? history.rps.reduce((a, b) => a + b, 0) / history.rps.length : 0
   const maxRps = history.rps.length > 0 ? Math.max(...history.rps) : 0
   const minRps = history.rps.length > 0 ? Math.min(...history.rps) : 0
-  
+
   return (
     <box flexDirection="column">
       <text fg="#7dcfff">Requests Per Second</text>
-      
+
       <box flexDirection="row" gap={4} marginTop={1}>
-        <StatsTable rows={[
-          { label: 'Current', value: currentRps.toFixed(1), color: '#9ece6a' },
-          { label: 'Average', value: avgRps.toFixed(1) },
-          { label: 'Min', value: minRps.toFixed(1) },
-          { label: 'Max', value: maxRps.toFixed(1) },
-        ]} />
-        
+        <StatsTable
+          rows={[
+            { label: 'Current', value: currentRps.toFixed(1), color: '#9ece6a' },
+            { label: 'Average', value: avgRps.toFixed(1) },
+            { label: 'Min', value: minRps.toFixed(1) },
+            { label: 'Max', value: maxRps.toFixed(1) },
+          ]}
+        />
+
         <box flexDirection="column">
           <text fg="#565f89">Variance: {(maxRps - minRps).toFixed(1)}</text>
           <text fg="#565f89">Samples: {history.rps.length}</text>
         </box>
       </box>
-      
+
       <box marginTop={1}>
         <Sparkline values={history.rps} label="RPS Over Time" color="#9ece6a" width={60} />
       </box>
-      
+
       {history.successRate.length > 0 && (
         <box marginTop={1}>
-          <Sparkline values={history.successRate} label="Success Rate %" color="#7aa2f7" width={60} />
+          <Sparkline
+            values={history.successRate}
+            label="Success Rate %"
+            color="#7aa2f7"
+            width={60}
+          />
         </box>
       )}
     </box>
   )
 }
 
-function LatencyView({ snapshot, history, result }: { 
-  snapshot?: StatsSnapshot, history: MetricHistory, result?: BenchmarkResult 
+function LatencyView({
+  snapshot,
+  history,
+  result,
+}: {
+  snapshot?: StatsSnapshot
+  history: MetricHistory
+  result?: BenchmarkResult
 }) {
   return (
     <box flexDirection="column">
       <text fg="#7dcfff">Latency Distribution</text>
-      
+
       <box flexDirection="row" gap={4} marginTop={1}>
         <box flexDirection="column">
           <text fg="#565f89">Percentiles</text>
-          <StatsTable rows={[
-            { label: 'Min', value: formatLatency(result?.latency.min ?? 0) },
-            { label: 'P50', value: formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0) },
-            { label: 'P75', value: formatLatency(result?.latency.p75 ?? 0) },
-            { label: 'P90', value: formatLatency(result?.latency.p90 ?? 0) },
-            { label: 'P95', value: formatLatency(result?.latency.p95 ?? 0) },
-            { label: 'P99', value: formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0) },
-            { label: 'Max', value: formatLatency(result?.latency.max ?? 0) },
-          ]} />
+          <StatsTable
+            rows={[
+              { label: 'Min', value: formatLatency(result?.latency.min ?? 0) },
+              {
+                label: 'P50',
+                value: formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0),
+              },
+              { label: 'P75', value: formatLatency(result?.latency.p75 ?? 0) },
+              { label: 'P90', value: formatLatency(result?.latency.p90 ?? 0) },
+              { label: 'P95', value: formatLatency(result?.latency.p95 ?? 0) },
+              {
+                label: 'P99',
+                value: formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0),
+              },
+              { label: 'Max', value: formatLatency(result?.latency.max ?? 0) },
+            ]}
+          />
         </box>
-        
+
         <box flexDirection="column">
           <text fg="#565f89">Statistics</text>
-          <StatsTable rows={[
-            { label: 'Mean', value: formatLatency(result?.latency.mean ?? 0) },
-            { label: 'StdDev', value: formatLatency(result?.latency.stddev ?? 0) },
-          ]} />
+          <StatsTable
+            rows={[
+              { label: 'Mean', value: formatLatency(result?.latency.mean ?? 0) },
+              { label: 'StdDev', value: formatLatency(result?.latency.stddev ?? 0) },
+            ]}
+          />
         </box>
       </box>
-      
+
       <box marginTop={1}>
-        <Sparkline values={history.latencyP50} label="P50 Latency Over Time" color="#7aa2f7" width={60} />
+        <Sparkline
+          values={history.latencyP50}
+          label="P50 Latency Over Time"
+          color="#7aa2f7"
+          width={60}
+        />
       </box>
-      
+
       <box marginTop={1}>
-        <Sparkline values={history.latencyP99} label="P99 Latency Over Time" color="#f7768e" width={60} />
+        <Sparkline
+          values={history.latencyP99}
+          label="P99 Latency Over Time"
+          color="#f7768e"
+          width={60}
+        />
       </box>
-      
+
       {result && <LatencyHistogram result={result} />}
     </box>
   )
 }
 
-function ThroughputView({ snapshot, history, result }: { 
-  snapshot?: StatsSnapshot, history: MetricHistory, result?: BenchmarkResult 
+function ThroughputView({
+  snapshot: _snapshot,
+  history,
+  result,
+}: {
+  snapshot?: StatsSnapshot
+  history: MetricHistory
+  result?: BenchmarkResult
 }) {
-  const avgThroughput = history.throughput.length > 0 
-    ? history.throughput.reduce((a, b) => a + b, 0) / history.throughput.length 
-    : 0
-  
+  const avgThroughput =
+    history.throughput.length > 0
+      ? history.throughput.reduce((a, b) => a + b, 0) / history.throughput.length
+      : 0
+
   return (
     <box flexDirection="column">
       <text fg="#7dcfff">Data Throughput</text>
-      
+
       <box flexDirection="row" gap={4} marginTop={1}>
-        <StatsTable rows={[
-          { label: 'Current', value: formatThroughput(history.throughput[history.throughput.length - 1] ?? 0), color: '#9ece6a' },
-          { label: 'Average', value: formatThroughput(avgThroughput) },
-          { label: 'Total Data', value: formatBytes(result?.totalBytes ?? 0) },
-        ]} />
+        <StatsTable
+          rows={[
+            {
+              label: 'Current',
+              value: formatThroughput(history.throughput[history.throughput.length - 1] ?? 0),
+              color: '#9ece6a',
+            },
+            { label: 'Average', value: formatThroughput(avgThroughput) },
+            { label: 'Total Data', value: formatBytes(result?.totalBytes ?? 0) },
+          ]}
+        />
       </box>
-      
+
       <box marginTop={1}>
-        <Sparkline values={history.throughput} label="Throughput Over Time" color="#e0af68" width={60} />
+        <Sparkline
+          values={history.throughput}
+          label="Throughput Over Time"
+          color="#e0af68"
+          width={60}
+        />
       </box>
     </box>
   )
@@ -387,10 +516,10 @@ function LatencyHistogram({ result }: { result: BenchmarkResult }) {
     { label: 'P95', value: result.latency.p95, color: '#e0af68' },
     { label: 'P99', value: result.latency.p99, color: '#f7768e' },
   ]
-  
+
   const maxValue = Math.max(...buckets.map(b => b.value))
   const barWidth = 30
-  
+
   return (
     <box flexDirection="column" marginTop={1}>
       <text fg="#565f89">Histogram</text>
@@ -399,7 +528,9 @@ function LatencyHistogram({ result }: { result: BenchmarkResult }) {
         const bar = '▓'.repeat(width)
         return (
           <box key={bucket.label} flexDirection="row">
-            <text fg="#565f89" style={{ width: 4 }}>{bucket.label}</text>
+            <text fg="#565f89" style={{ width: 4 }}>
+              {bucket.label}
+            </text>
             <text fg={bucket.color}> {bar}</text>
             <text fg="#c0caf5"> {formatLatency(bucket.value)}</text>
           </box>
@@ -409,10 +540,16 @@ function LatencyHistogram({ result }: { result: BenchmarkResult }) {
   )
 }
 
-function StatusCodes({ statusCodes, total }: { statusCodes: Record<number, number>, total: number }) {
+function StatusCodes({
+  statusCodes,
+  total,
+}: {
+  statusCodes: Record<number, number>
+  total: number
+}) {
   const entries = Object.entries(statusCodes).sort(([a], [b]) => Number(a) - Number(b))
   if (entries.length === 0) return null
-  
+
   return (
     <box flexDirection="column" marginTop={1}>
       <text fg="#7dcfff">Status Codes</text>
@@ -424,7 +561,9 @@ function StatusCodes({ statusCodes, total }: { statusCodes: Record<number, numbe
           return (
             <text key={code}>
               <span fg={color}>{code}</span>
-              <span fg="#565f89">: {count} ({pct}%)</span>
+              <span fg="#565f89">
+                : {count} ({pct}%)
+              </span>
             </text>
           )
         })}
@@ -433,7 +572,7 @@ function StatusCodes({ statusCodes, total }: { statusCodes: Record<number, numbe
   )
 }
 
-function RunningStatus({ progress, elapsed }: { progress: number, elapsed: number }) {
+function RunningStatus({ progress, elapsed }: { progress: number; elapsed: number }) {
   return (
     <box flexDirection="column" marginBottom={1}>
       <box flexDirection="row" gap={2}>
@@ -444,25 +583,33 @@ function RunningStatus({ progress, elapsed }: { progress: number, elapsed: numbe
   )
 }
 
-function CommandBar({ phase, exportMessage, editInput, connections }: { 
-  phase: Phase, exportMessage?: string, editInput: string, connections: number 
+function CommandBar({
+  phase,
+  exportMessage,
+  editInput,
+  connections,
+}: {
+  phase: Phase
+  exportMessage?: string
+  editInput: string
+  connections: number
 }) {
   if (phase === 'running') {
     return (
       <box marginTop={1}>
-        <text fg="#565f89">[q] stop early  [1-4] switch view  [tab] cycle</text>
+        <text fg="#565f89">[q] stop early [1-4] switch view [tab] cycle</text>
       </box>
     )
   }
-  
+
   if (phase === 'exporting') {
     return (
       <box marginTop={1}>
-        <text fg="#e0af68">[j] JSON  [c] CSV  [m] Markdown  [esc] cancel</text>
+        <text fg="#e0af68">[j] JSON [c] CSV [m] Markdown [esc] cancel</text>
       </box>
     )
   }
-  
+
   if (phase === 'editing') {
     return (
       <box flexDirection="column" marginTop={1}>
@@ -472,26 +619,34 @@ function CommandBar({ phase, exportMessage, editInput, connections }: {
           <text fg="#c0caf5">{editInput || connections}</text>
           <text fg="#7aa2f7">█</text>
         </box>
-        <text fg="#565f89">[0-9] type  [backspace] delete  [enter] confirm  [esc] cancel</text>
+        <text fg="#565f89">[0-9] type [backspace] delete [enter] confirm [esc] cancel</text>
       </box>
     )
   }
-  
+
   if (phase === 'complete') {
     return (
       <box flexDirection="column" marginTop={1}>
         <text fg="#565f89">{'─'.repeat(60)}</text>
         {exportMessage && <text fg="#9ece6a">{exportMessage}</text>}
-        <text fg="#7dcfff">[r] rerun  [c] connections  [e] export  [1-4] view  [q] quit</text>
+        <text fg="#7dcfff">[r] rerun [c] connections [e] export [1-4] view [q] quit</text>
       </box>
     )
   }
-  
+
   return null
 }
 
-function MetricContent({ view, snapshot, history, result }: {
-  view: MetricView, snapshot?: StatsSnapshot, history: MetricHistory, result?: BenchmarkResult
+function MetricContent({
+  view,
+  snapshot,
+  history,
+  result,
+}: {
+  view: MetricView
+  snapshot?: StatsSnapshot
+  history: MetricHistory
+  result?: BenchmarkResult
 }) {
   switch (view) {
     case 'rps':
@@ -509,8 +664,8 @@ const VIEW_ORDER: MetricView[] = ['overview', 'rps', 'latency', 'throughput']
 
 export function BenchmarkTui() {
   const state = useTuiState()
-  
-  useKeyboard((key) => {
+
+  useKeyboard(key => {
     if (state.phase === 'running' || state.phase === 'complete') {
       if (key.name === '1') updateTuiState({ view: 'overview' })
       else if (key.name === '2') updateTuiState({ view: 'rps' })
@@ -522,7 +677,7 @@ export function BenchmarkTui() {
         updateTuiState({ view: VIEW_ORDER[nextIndex] })
       }
     }
-    
+
     if (state.phase === 'running') {
       if (key.name === 'q' && state.onStop) {
         state.onStop()
@@ -570,41 +725,42 @@ export function BenchmarkTui() {
       }
     }
   })
-  
+
   return (
     <box flexDirection="column" padding={1}>
       <Header url={state.url} method={state.method} connections={state.connections} />
-      
-      {state.phase === 'warmup' && (
-        <text fg="#e0af68">Warming up...</text>
-      )}
-      
-      {(state.phase === 'running' || state.phase === 'complete' || state.phase === 'exporting' || state.phase === 'editing') && (
+
+      {state.phase === 'warmup' && <text fg="#e0af68">Warming up...</text>}
+
+      {(state.phase === 'running' ||
+        state.phase === 'complete' ||
+        state.phase === 'exporting' ||
+        state.phase === 'editing') && (
         <>
           <TabBar currentView={state.view} phase={state.phase} />
-          
+
           {state.phase === 'running' && state.snapshot && (
             <RunningStatus progress={state.progress} elapsed={state.snapshot.elapsedMs} />
           )}
-          
+
           {state.phase === 'complete' && (
             <box marginBottom={1}>
               <text fg="#9ece6a">✓ Benchmark complete</text>
             </box>
           )}
-          
-          <MetricContent 
-            view={state.view} 
-            snapshot={state.snapshot} 
-            history={state.history} 
-            result={state.result} 
+
+          <MetricContent
+            view={state.view}
+            snapshot={state.snapshot}
+            history={state.history}
+            result={state.result}
           />
         </>
       )}
-      
-      <CommandBar 
-        phase={state.phase} 
-        exportMessage={state.exportMessage} 
+
+      <CommandBar
+        phase={state.phase}
+        exportMessage={state.exportMessage}
         editInput={state.editInput}
         connections={state.connections}
       />

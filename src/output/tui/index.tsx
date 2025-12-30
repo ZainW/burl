@@ -1,7 +1,13 @@
 import { createCliRenderer, type CliRenderer } from '@opentui/core'
 import { createRoot } from '@opentui/react'
 import type { BenchmarkResult, StatsSnapshot } from '../../stats/types'
-import { BenchmarkTui, updateTuiState, getTuiState, resetTuiState, appendMetricHistory } from './BenchmarkTui'
+import {
+  BenchmarkTui,
+  updateTuiState,
+  getTuiState,
+  resetTuiState,
+  appendMetricHistory,
+} from './BenchmarkTui'
 
 let renderer: CliRenderer | null = null
 let root: ReturnType<typeof createRoot> | null = null
@@ -24,9 +30,9 @@ export async function initTui(
   renderer = await createCliRenderer({
     exitOnCtrlC: false,
   })
-  
+
   root = createRoot(renderer)
-  
+
   updateTuiState({
     phase: 'idle',
     view: 'overview',
@@ -41,7 +47,7 @@ export async function initTui(
     editInput: '',
     ...callbacks,
   })
-  
+
   root.render(<BenchmarkTui />)
 }
 
