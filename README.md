@@ -16,7 +16,7 @@ Modern HTTP benchmarking CLI tool built with Bun. Features rich terminal output 
 ### From Source
 
 ```bash
-git clone https://github.com/yourname/burl
+git clone https://github.com/ZainW/burl
 cd burl
 bun install
 bun run build

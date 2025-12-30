@@ -37,7 +37,11 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/ZainW/burl.git"
+  },
+  "homepage": "https://github.com/ZainW/burl#readme",
+  "bugs": {
+    "url": "https://github.com/ZainW/burl/issues"
   },
   "keywords": [
     "http",
