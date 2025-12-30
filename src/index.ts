@@ -8,7 +8,9 @@ import { exportJson } from './output/export/json';
 import { exportCsv } from './output/export/csv';
 import { exportMarkdown } from './output/export/markdown';
 import { exportLlmJson, exportLlmMarkdown } from './output/export/llm';
-import { shouldUseTui } from './utils/tty';
+import { shouldUseTui, isInteractiveTerminal } from './utils/tty';
+import type { BenchmarkConfig } from './core/types';
+import type { BenchmarkResult } from './stats/types';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -34,16 +36,35 @@ async function main(): Promise<void> {
   }
 
   const config = buildConfig(options);
-  const engine = new BenchmarkEngine(config);
 
   const isExportMode = Boolean(options.llm || options.output || options.format !== 'text');
   const useTui = shouldUseTui(options.noTui || options.quiet || isExportMode, false);
   const useAnsiProgress = !useTui && process.stdout.isTTY && !options.quiet && !options.llm;
 
   if (useTui) {
-    const { initTui, tuiSetRunning, tuiUpdateProgress, tuiSetComplete, tuiDestroy } = await import('./output/tui/index.tsx');
-    
-    await initTui(config.url, config.method, config.connections, () => engine.stop());
+    await runTuiMode(config, options);
+  } else {
+    await runCliMode(config, options, useAnsiProgress);
+  }
+}
+
+async function runTuiMode(config: BenchmarkConfig, options: ReturnType<typeof parseArgs>): Promise<void> {
+  const { 
+    initTui, 
+    tuiSetRunning, 
+    tuiUpdateProgress, 
+    tuiSetComplete, 
+    tuiSetExportMessage,
+    tuiDestroy 
+  } = await import('./output/tui/index.tsx');
+
+  let engine = new BenchmarkEngine(config);
+  let currentResult: BenchmarkResult | null = null;
+  let shouldExit = false;
+  let exportCount = 0;
+
+  const runBenchmark = async () => {
+    engine = new BenchmarkEngine(config);
     tuiSetRunning();
 
     engine.setProgressCallback((snapshot, progress) => {
@@ -51,78 +72,123 @@ async function main(): Promise<void> {
     });
 
     try {
-      const result = await engine.run();
-      tuiSetComplete(result);
-
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      tuiDestroy();
-
-      let output: string | undefined;
-      if (options.format === 'json') {
-        output = exportJson(result);
-      } else if (options.format === 'csv') {
-        output = exportCsv(result);
-      } else if (options.format === 'markdown') {
-        output = exportMarkdown(result);
-      }
-
-      if (output && options.output) {
-        await Bun.write(options.output, output);
-      }
-
-      const exitCode = result.failedRequests > 0 ? 1 : 0;
-      process.exit(exitCode);
+      currentResult = await engine.run();
+      tuiSetComplete(currentResult);
     } catch (err) {
       tuiDestroy();
       console.error('Error:', err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
-  } else {
+  };
+
+  const handleExport = async (format: 'json' | 'csv' | 'markdown') => {
+    if (!currentResult) return;
+
+    exportCount++;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const ext = format === 'markdown' ? 'md' : format;
+    const filename = options.output || `burl-${timestamp}.${ext}`;
+
+    let output: string;
+    switch (format) {
+      case 'json':
+        output = exportJson(currentResult);
+        break;
+      case 'csv':
+        output = exportCsv(currentResult);
+        break;
+      case 'markdown':
+        output = exportMarkdown(currentResult);
+        break;
+    }
+
+    await Bun.write(filename, output);
+    tuiSetExportMessage(`Exported to ${filename}`);
+  };
+
+  const handleQuit = () => {
+    shouldExit = true;
+    tuiDestroy();
+    const exitCode = currentResult && currentResult.failedRequests > 0 ? 1 : 0;
+    process.exit(exitCode);
+  };
+
+  await initTui(
+    config.url,
+    config.method,
+    config.connections,
+    config.durationMs,
+    {
+      onStop: () => engine.stop(),
+      onRerun: () => runBenchmark(),
+      onExport: handleExport,
+      onQuit: handleQuit,
+    }
+  );
+
+  await runBenchmark();
+
+  await new Promise<void>((resolve) => {
+    const checkExit = setInterval(() => {
+      if (shouldExit) {
+        clearInterval(checkExit);
+        resolve();
+      }
+    }, 100);
+  });
+}
+
+async function runCliMode(
+  config: BenchmarkConfig, 
+  options: ReturnType<typeof parseArgs>,
+  useAnsiProgress: boolean
+): Promise<void> {
+  const engine = new BenchmarkEngine(config);
+
+  if (useAnsiProgress) {
+    console.log(renderHeader(config.url, config.method, config.connections));
+    engine.setProgressCallback((snapshot, progress) => {
+      process.stdout.write(renderProgress(snapshot, progress, config.url));
+    });
+  }
+
+  try {
+    const result = await engine.run();
+
     if (useAnsiProgress) {
-      console.log(renderHeader(config.url, config.method, config.connections));
-      engine.setProgressCallback((snapshot, progress) => {
-        process.stdout.write(renderProgress(snapshot, progress, config.url));
-      });
+      process.stdout.write('\n');
     }
 
-    try {
-      const result = await engine.run();
+    let output: string;
 
-      if (useAnsiProgress) {
-        process.stdout.write('\n');
-      }
-
-      let output: string;
-
-      if (options.llm === 'json') {
-        output = exportLlmJson(result);
-      } else if (options.llm === 'markdown') {
-        output = exportLlmMarkdown(result);
-      } else if (options.format === 'json') {
-        output = exportJson(result);
-      } else if (options.format === 'csv') {
-        output = exportCsv(result);
-      } else if (options.format === 'markdown') {
-        output = exportMarkdown(result);
-      } else {
-        output = renderResult(result);
-      }
-
-      if (options.output) {
-        await Bun.write(options.output, output);
-        if (!options.quiet) {
-          console.log(`Results written to ${options.output}`);
-        }
-      } else {
-        console.log(output);
-      }
-
-      const exitCode = result.failedRequests > 0 ? 1 : 0;
-      process.exit(exitCode);
-    } catch (err) {
-      console.error('Error:', err instanceof Error ? err.message : String(err));
-      process.exit(1);
+    if (options.llm === 'json') {
+      output = exportLlmJson(result);
+    } else if (options.llm === 'markdown') {
+      output = exportLlmMarkdown(result);
+    } else if (options.format === 'json') {
+      output = exportJson(result);
+    } else if (options.format === 'csv') {
+      output = exportCsv(result);
+    } else if (options.format === 'markdown') {
+      output = exportMarkdown(result);
+    } else {
+      output = renderResult(result);
     }
+
+    if (options.output) {
+      await Bun.write(options.output, output);
+      if (!options.quiet) {
+        console.log(`Results written to ${options.output}`);
+      }
+    } else {
+      console.log(output);
+    }
+
+    const exitCode = result.failedRequests > 0 ? 1 : 0;
+    process.exit(exitCode);
+  } catch (err) {
+    console.error('Error:', err instanceof Error ? err.message : String(err));
+    process.exit(1);
   }
 }
 
@@ -166,6 +232,13 @@ Output Options:
   --no-color               Disable colors
   -v, --verbose            Verbose output
   --quiet                  Minimal output
+
+TUI Controls:
+  [1-4]                    Switch metric view (Overview/RPS/Latency/Throughput)
+  [tab]                    Cycle through views
+  [q]                      Stop benchmark / Quit
+  [r]                      Rerun benchmark (after completion)
+  [e]                      Export results (after completion)
 
 Other:
   -k, --insecure           Skip TLS verification

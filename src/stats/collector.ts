@@ -80,6 +80,7 @@ export class StatsCollector {
   getSnapshot(): StatsSnapshot {
     const elapsed = Date.now() - this.startTime;
     const rps = elapsed > 0 ? (this.totalRequests / elapsed) * 1000 : 0;
+    const bytesPerSecond = elapsed > 0 ? (this.totalBytes / elapsed) * 1000 : 0;
 
     const sorted = [...this.recentLatencies].sort((a, b) => a - b);
 
@@ -88,6 +89,7 @@ export class StatsCollector {
       successfulRequests: this.successfulRequests,
       failedRequests: this.failedRequests,
       currentRps: rps,
+      bytesPerSecond,
       latencyP50: this.percentile(sorted, 50),
       latencyP99: this.percentile(sorted, 99),
       elapsedMs: elapsed,

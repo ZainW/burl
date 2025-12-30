@@ -1,27 +1,43 @@
 import { createCliRenderer, type CliRenderer } from '@opentui/core'
 import { createRoot } from '@opentui/react'
 import type { BenchmarkResult, StatsSnapshot } from '../../stats/types'
-import { BenchmarkTui, updateTuiState, getTuiState } from './BenchmarkTui'
+import { BenchmarkTui, updateTuiState, getTuiState, resetTuiState, appendMetricHistory } from './BenchmarkTui'
 
 let renderer: CliRenderer | null = null
 let root: ReturnType<typeof createRoot> | null = null
 
-export async function initTui(url: string, method: string, connections: number, onStop?: () => void): Promise<void> {
+interface TuiCallbacks {
+  onStop?: () => void
+  onRerun?: () => void
+  onExport?: (format: 'json' | 'csv' | 'markdown') => void
+  onQuit?: () => void
+}
+
+export async function initTui(
+  url: string,
+  method: string,
+  connections: number,
+  duration: number | undefined,
+  callbacks: TuiCallbacks
+): Promise<void> {
   renderer = await createCliRenderer({
-    exitOnCtrlC: true,
+    exitOnCtrlC: false,
   })
   
   root = createRoot(renderer)
   
   updateTuiState({
     phase: 'idle',
+    view: 'overview',
     url,
     method,
     connections,
+    duration,
     progress: 0,
     snapshot: undefined,
     result: undefined,
-    onStop,
+    exportMessage: undefined,
+    ...callbacks,
   })
   
   root.render(<BenchmarkTui />)
@@ -32,15 +48,21 @@ export function tuiSetWarmup(): void {
 }
 
 export function tuiSetRunning(): void {
+  resetTuiState()
   updateTuiState({ phase: 'running' })
 }
 
 export function tuiUpdateProgress(snapshot: StatsSnapshot, progress: number): void {
+  appendMetricHistory(snapshot)
   updateTuiState({ snapshot, progress })
 }
 
 export function tuiSetComplete(result: BenchmarkResult): void {
   updateTuiState({ phase: 'complete', result, progress: 1 })
+}
+
+export function tuiSetExportMessage(message: string): void {
+  updateTuiState({ exportMessage: message })
 }
 
 export function tuiDestroy(): void {
@@ -55,4 +77,4 @@ export function isTuiActive(): boolean {
   return renderer !== null
 }
 
-export { updateTuiState, getTuiState }
+export { updateTuiState, getTuiState, resetTuiState }
