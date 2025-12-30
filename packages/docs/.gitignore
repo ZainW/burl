@@ -1,0 +1,24 @@
+# Nuxt
+.nuxt/
+.output/
+.data/
+.nitro/
+.cache/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Vercel
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,12 +1,12 @@
 # PROJECT KNOWLEDGE BASE
 
 **Generated:** 2025-12-29
-**Commit:** 1cf99b7
-**Branch:** master
+**Commit:** a6475e0
+**Branch:** feat/docs-site
 
 ## OVERVIEW
 
-HTTP benchmarking CLI (`burl`) built with Bun. Rich TUI + LLM-optimized output formats. Compiles to single native executable.
+HTTP benchmarking CLI (`burl`) built with Bun. Rich TUI + LLM-optimized output formats. Compiles to single native executable. Documentation site at burl.wania.app.
 
 ## STRUCTURE
 
@@ -23,7 +23,9 @@ burl/
 │   │   │   ├── stats/     # StatsCollector, latency percentiles
 │   │   │   └── utils/     # bytes, colors, time, tty helpers
 │   │   └── test/          # Mirrors src/ structure
-│   └── docs/          # Placeholder (empty)
+│   └── docs/          # Nuxt 4 docs site (@nuxt/content, @nuxt/ui)
+│       ├── app/           # Vue pages and layouts
+│       └── content/       # Markdown docs (19 pages, 6 sections)
 ├── package.json       # Monorepo root - workspace scripts
 └── tsconfig.json      # Project references only
 ```
@@ -116,6 +118,11 @@ bun run build:all                 # Cross-platform (linux/darwin/windows x64/arm
 
 # CI
 bun run ci                        # check + test (what CI runs)
+
+# Docs
+bun run docs:dev                  # Local dev server (localhost:3000)
+bun run docs:build                # Production build
+bun run docs:generate             # Static site generation
 ```
 
 ## TOOLS
@@ -131,8 +138,9 @@ bun run ci                        # check + test (what CI runs)
 ## NOTES
 
 - **No `tsc`**: Uses `tsgo` (TypeScript native preview) - much faster
-- **Monorepo but single package**: `packages/docs` is placeholder, all code in `packages/cli`
+- **Two packages**: CLI code in `packages/cli`, docs site in `packages/docs`
 - **HDR Histogram**: Uses `hdr-histogram-js` for accurate percentile calculations
 - **HTTP/3**: Flag exists (`--http3`) but marked experimental
 - **Exit codes**: Non-zero if any requests failed (`result.failedRequests > 0`)
 - **TUI detection**: `shouldUseTui()` checks TTY, `--no-tui`, `--quiet`, export modes
+
