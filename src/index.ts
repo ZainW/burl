@@ -8,6 +8,7 @@ import { exportJson } from './output/export/json';
 import { exportCsv } from './output/export/csv';
 import { exportMarkdown } from './output/export/markdown';
 import { exportLlmJson, exportLlmMarkdown } from './output/export/llm';
+import { shouldUseTui } from './utils/tty';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -35,53 +36,93 @@ async function main(): Promise<void> {
   const config = buildConfig(options);
   const engine = new BenchmarkEngine(config);
 
-  const isTTY = process.stdout.isTTY && !options.noTui && !options.llm && !options.quiet;
+  const isExportMode = Boolean(options.llm || options.output || options.format !== 'text');
+  const useTui = shouldUseTui(options.noTui || options.quiet || isExportMode, false);
+  const useAnsiProgress = !useTui && process.stdout.isTTY && !options.quiet && !options.llm;
 
-  if (isTTY) {
-    console.log(renderHeader(config.url, config.method, config.connections));
+  if (useTui) {
+    const { initTui, tuiSetRunning, tuiUpdateProgress, tuiSetComplete, tuiDestroy } = await import('./output/tui/index.tsx');
+    
+    await initTui(config.url, config.method, config.connections);
+    tuiSetRunning();
 
     engine.setProgressCallback((snapshot, progress) => {
-      process.stdout.write(renderProgress(snapshot, progress, config.url));
+      tuiUpdateProgress(snapshot, progress);
     });
-  }
 
-  try {
-    const result = await engine.run();
+    try {
+      const result = await engine.run();
+      tuiSetComplete(result);
 
-    if (isTTY) {
-      process.stdout.write('\n');
-    }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      tuiDestroy();
 
-    let output: string;
-
-    if (options.llm === 'json') {
-      output = exportLlmJson(result);
-    } else if (options.llm === 'markdown') {
-      output = exportLlmMarkdown(result);
-    } else if (options.format === 'json') {
-      output = exportJson(result);
-    } else if (options.format === 'csv') {
-      output = exportCsv(result);
-    } else if (options.format === 'markdown') {
-      output = exportMarkdown(result);
-    } else {
-      output = renderResult(result);
-    }
-
-    if (options.output) {
-      await Bun.write(options.output, output);
-      if (!options.quiet) {
-        console.log(`Results written to ${options.output}`);
+      let output: string | undefined;
+      if (options.format === 'json') {
+        output = exportJson(result);
+      } else if (options.format === 'csv') {
+        output = exportCsv(result);
+      } else if (options.format === 'markdown') {
+        output = exportMarkdown(result);
       }
-    } else {
-      console.log(output);
+
+      if (output && options.output) {
+        await Bun.write(options.output, output);
+      }
+
+      const exitCode = result.failedRequests > 0 ? 1 : 0;
+      process.exit(exitCode);
+    } catch (err) {
+      tuiDestroy();
+      console.error('Error:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  } else {
+    if (useAnsiProgress) {
+      console.log(renderHeader(config.url, config.method, config.connections));
+      engine.setProgressCallback((snapshot, progress) => {
+        process.stdout.write(renderProgress(snapshot, progress, config.url));
+      });
     }
 
-    const exitCode = result.failedRequests > 0 ? 1 : 0;
-    process.exit(exitCode);
-  } catch (err) {
-    console.error('Error:', err instanceof Error ? err.message : String(err));
-    process.exit(1);
+    try {
+      const result = await engine.run();
+
+      if (useAnsiProgress) {
+        process.stdout.write('\n');
+      }
+
+      let output: string;
+
+      if (options.llm === 'json') {
+        output = exportLlmJson(result);
+      } else if (options.llm === 'markdown') {
+        output = exportLlmMarkdown(result);
+      } else if (options.format === 'json') {
+        output = exportJson(result);
+      } else if (options.format === 'csv') {
+        output = exportCsv(result);
+      } else if (options.format === 'markdown') {
+        output = exportMarkdown(result);
+      } else {
+        output = renderResult(result);
+      }
+
+      if (options.output) {
+        await Bun.write(options.output, output);
+        if (!options.quiet) {
+          console.log(`Results written to ${options.output}`);
+        }
+      } else {
+        console.log(output);
+      }
+
+      const exitCode = result.failedRequests > 0 ? 1 : 0;
+      process.exit(exitCode);
+    } catch (err) {
+      console.error('Error:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
   }
 }
 
