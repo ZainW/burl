@@ -25,15 +25,15 @@ src/
 
 ## WHERE TO LOOK (CLI-SPECIFIC)
 
-| Task | File | Function/Class |
-|------|------|----------------|
-| Add CLI flag | `cli.ts` | `parseArgs()` flags object |
-| Transform flag to config | `cli.ts` | `buildConfig()` |
-| Change worker behavior | `core/engine.ts` | `runWorker()` |
-| Add error category | `core/http-client.ts` | `categorizeError()` |
-| Add latency percentile | `stats/collector.ts` | `calculateLatencyStats()` |
-| Add TUI keyboard shortcut | `output/tui/BenchmarkTui.tsx` | `useKeyboard()` handler |
-| Add LLM recommendation | `output/export/llm.ts` | `analyzeResult()` |
+| Task                      | File                          | Function/Class             |
+| ------------------------- | ----------------------------- | -------------------------- |
+| Add CLI flag              | `cli.ts`                      | `parseArgs()` flags object |
+| Transform flag to config  | `cli.ts`                      | `buildConfig()`            |
+| Change worker behavior    | `core/engine.ts`              | `runWorker()`              |
+| Add error category        | `core/http-client.ts`         | `categorizeError()`        |
+| Add latency percentile    | `stats/collector.ts`          | `calculateLatencyStats()`  |
+| Add TUI keyboard shortcut | `output/tui/BenchmarkTui.tsx` | `useKeyboard()` handler    |
+| Add LLM recommendation    | `output/export/llm.ts`        | `analyzeResult()`          |
 
 ## DATA FLOW
 
@@ -72,12 +72,12 @@ test/
 
 ## OUTPUT MODES
 
-| Mode | Trigger | Handler |
-|------|---------|---------|
-| TUI | Default (TTY) | `runTuiMode()` - React components |
-| ANSI | `--no-tui` or non-TTY | `runCliMode()` - simple.ts |
-| Export | `--format` or `--output` | `exportJson/Csv/Md()` |
-| LLM | `--llm json\|markdown` | `exportLlmJson/Markdown()` |
+| Mode   | Trigger                  | Handler                           |
+| ------ | ------------------------ | --------------------------------- |
+| TUI    | Default (TTY)            | `runTuiMode()` - React components |
+| ANSI   | `--no-tui` or non-TTY    | `runCliMode()` - simple.ts        |
+| Export | `--format` or `--output` | `exportJson/Csv/Md()`             |
+| LLM    | `--llm json\|markdown`   | `exportLlmJson/Markdown()`        |
 
 ## ANTI-PATTERNS (CLI-SPECIFIC)
 
