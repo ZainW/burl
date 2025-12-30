@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   if (useTui) {
     const { initTui, tuiSetRunning, tuiUpdateProgress, tuiSetComplete, tuiDestroy } = await import('./output/tui/index.tsx');
     
-    await initTui(config.url, config.method, config.connections);
+    await initTui(config.url, config.method, config.connections, () => engine.stop());
     tuiSetRunning();
 
     engine.setProgressCallback((snapshot, progress) => {

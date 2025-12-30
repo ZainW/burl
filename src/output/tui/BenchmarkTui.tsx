@@ -2,6 +2,7 @@ import type { BenchmarkResult, StatsSnapshot } from '../../stats/types'
 import { formatLatency, formatDuration } from '../../utils/time'
 import { formatBytes, formatThroughput } from '../../utils/bytes'
 import { useState, useEffect } from 'react'
+import { useKeyboard } from '@opentui/react'
 
 interface TuiState {
   phase: 'idle' | 'warmup' | 'running' | 'complete'
@@ -11,6 +12,7 @@ interface TuiState {
   snapshot?: StatsSnapshot
   progress: number
   result?: BenchmarkResult
+  onStop?: () => void
 }
 
 let globalState: TuiState = {
@@ -232,6 +234,12 @@ function ResultView({ result }: { result: BenchmarkResult }) {
 export function BenchmarkTui() {
   const state = useTuiState()
   
+  useKeyboard((key) => {
+    if (key.name === 'q' && state.phase === 'running' && state.onStop) {
+      state.onStop()
+    }
+  })
+  
   return (
     <box flexDirection="column" padding={1}>
       <Header url={state.url} method={state.method} connections={state.connections} />
@@ -241,7 +249,10 @@ export function BenchmarkTui() {
       )}
       
       {state.phase === 'running' && state.snapshot && (
-        <RunningView snapshot={state.snapshot} progress={state.progress} />
+        <>
+          <RunningView snapshot={state.snapshot} progress={state.progress} />
+          <text fg="#565f89" marginTop={1}>Press 'q' to stop early</text>
+        </>
       )}
       
       {state.phase === 'complete' && state.result && (

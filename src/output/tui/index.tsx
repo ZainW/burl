@@ -6,7 +6,7 @@ import { BenchmarkTui, updateTuiState, getTuiState } from './BenchmarkTui'
 let renderer: CliRenderer | null = null
 let root: ReturnType<typeof createRoot> | null = null
 
-export async function initTui(url: string, method: string, connections: number): Promise<void> {
+export async function initTui(url: string, method: string, connections: number, onStop?: () => void): Promise<void> {
   renderer = await createCliRenderer({
     exitOnCtrlC: true,
   })
@@ -21,6 +21,7 @@ export async function initTui(url: string, method: string, connections: number):
     progress: 0,
     snapshot: undefined,
     result: undefined,
+    onStop,
   })
   
   root.render(<BenchmarkTui />)
