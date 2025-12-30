@@ -44,6 +44,7 @@ jobs:
 
       - name: Run tests
         run: bun test
+        working-directory: packages/cli
 
   build:
     name: Build
@@ -63,4 +64,4 @@ jobs:
         run: bun run build
 
       - name: Verify binary exists
-        run: test -f dist/burl
+        run: test -f packages/cli/dist/burl

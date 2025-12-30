@@ -3,7 +3,18 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "burl",
+      "name": "burl-monorepo",
+      "devDependencies": {
+        "oxfmt": "^0.21.0",
+        "typescript": "^5.7.2",
+      },
+    },
+    "packages/cli": {
+      "name": "@burl/cli",
+      "version": "0.1.0",
+      "bin": {
+        "burl": "./src/index.ts",
+      },
       "dependencies": {
         "@opentui/core": "^0.1.66",
         "@opentui/react": "^0.1.66",
@@ -15,14 +26,20 @@
         "@types/bun": "^1.1.14",
         "@types/react": "^19.2.7",
         "@typescript/native-preview": "^7.0.0-dev.20251229.1",
-        "oxfmt": "^0.21.0",
         "oxlint": "^1.36.0",
-        "typescript": "^5.7.2",
       },
+    },
+    "packages/docs": {
+      "name": "@burl/docs",
+      "version": "0.1.0",
     },
   },
   "packages": {
     "@assemblyscript/loader": ["@assemblyscript/loader@0.19.23", "", {}, "sha512-ulkCYfFbYj01ie1MDOyxv2F6SpRN1TOj7fQxbP07D6HmeR+gr2JLSmINKjga2emB+b1L2KGrFKBTc+e00p54nw=="],
+
+    "@burl/cli": ["@burl/cli@workspace:packages/cli"],
+
+    "@burl/docs": ["@burl/docs@workspace:packages/docs"],
 
     "@dimforge/rapier2d-simd-compat": ["@dimforge/rapier2d-simd-compat@0.17.3", "", {}, "sha512-bijvwWz6NHsNj5e5i1vtd3dU2pDhthSaTUZSh14DUGGKJfw8eMnlWZsxwHBxB/a3AXVNDjL9abuHw1k9FGR+jg=="],
 
