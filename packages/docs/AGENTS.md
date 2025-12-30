@@ -30,7 +30,6 @@ docs/
 | Add doc page | `content/{section}/` | Prefix with number for ordering |
 | Change page layout | `app/pages/[...slug].vue` | Uses UPage, UPageHeader |
 | Add content collection | `content.config.ts` | Define schema with Zod |
-| Configure LLM output | `nuxt.config.ts` | `llms.sections[]` config |
 | Add OG image | `nuxt.config.ts` | `ogImage.defaults` |
 
 ## CONVENTIONS
@@ -62,7 +61,6 @@ links:                    # Optional - action buttons
 | `@nuxt/content` | Markdown → Vue, SQLite content DB |
 | `@nuxt/ui` | UI components (UPage, UCard, etc.) |
 | `nuxt-og-image` | Auto-generated OG images |
-| `nuxt-llms` | LLM-optimized docs export |
 
 ## COMMANDS
 
@@ -77,5 +75,4 @@ bun run preview   # Preview production build
 
 - **SQLite content DB**: Stored at `.data/content.db` - gitignored
 - **Deployed to**: burl.wania.app (Vercel)
-- **LLM sections**: Configured in `nuxt.config.ts` for AI-friendly output
 - **Tailwind v4**: Uses new CSS-based config in `assets/css/main.css`

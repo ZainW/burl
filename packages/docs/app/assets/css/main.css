@@ -27,8 +27,13 @@
   --ui-container: var(--container-8xl);
 }
 
-/* Vercel-style smooth transitions */
-* {
+/* Vercel-style smooth transitions (targeted for performance) */
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
   transition-property: color, background-color, border-color;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
