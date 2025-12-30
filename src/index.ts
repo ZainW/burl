@@ -55,16 +55,18 @@ async function runTuiMode(config: BenchmarkConfig, options: ReturnType<typeof pa
     tuiUpdateProgress, 
     tuiSetComplete, 
     tuiSetExportMessage,
+    tuiUpdateConnections,
     tuiDestroy 
   } = await import('./output/tui/index.tsx');
 
-  let engine = new BenchmarkEngine(config);
+  let currentConfig = { ...config };
+  let engine = new BenchmarkEngine(currentConfig);
   let currentResult: BenchmarkResult | null = null;
   let shouldExit = false;
   let exportCount = 0;
 
   const runBenchmark = async () => {
-    engine = new BenchmarkEngine(config);
+    engine = new BenchmarkEngine(currentConfig);
     tuiSetRunning();
 
     engine.setProgressCallback((snapshot, progress) => {
@@ -113,6 +115,12 @@ async function runTuiMode(config: BenchmarkConfig, options: ReturnType<typeof pa
     process.exit(exitCode);
   };
 
+  const handleUpdateConnections = (connections: number) => {
+    currentConfig = { ...currentConfig, connections };
+    tuiUpdateConnections(connections);
+    runBenchmark();
+  };
+
   await initTui(
     config.url,
     config.method,
@@ -123,6 +131,7 @@ async function runTuiMode(config: BenchmarkConfig, options: ReturnType<typeof pa
       onRerun: () => runBenchmark(),
       onExport: handleExport,
       onQuit: handleQuit,
+      onUpdateConnections: handleUpdateConnections,
     }
   );
 
@@ -238,6 +247,7 @@ TUI Controls:
   [tab]                    Cycle through views
   [q]                      Stop benchmark / Quit
   [r]                      Rerun benchmark (after completion)
+  [c]                      Change connections and rerun (after completion)
   [e]                      Export results (after completion)
 
 Other:

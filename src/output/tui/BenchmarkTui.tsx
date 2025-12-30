@@ -4,7 +4,7 @@ import { formatBytes, formatThroughput } from '../../utils/bytes'
 import { useState, useEffect } from 'react'
 import { useKeyboard } from '@opentui/react'
 
-type Phase = 'idle' | 'warmup' | 'running' | 'complete' | 'exporting'
+type Phase = 'idle' | 'warmup' | 'running' | 'complete' | 'exporting' | 'editing'
 type MetricView = 'overview' | 'rps' | 'latency' | 'throughput'
 
 interface MetricHistory {
@@ -31,7 +31,9 @@ interface TuiState {
   onRerun?: () => void
   onExport?: (format: 'json' | 'csv' | 'markdown') => void
   onQuit?: () => void
+  onUpdateConnections?: (connections: number) => void
   exportMessage?: string
+  editInput: string
 }
 
 const emptyHistory: MetricHistory = {
@@ -51,6 +53,7 @@ let globalState: TuiState = {
   connections: 1,
   progress: 0,
   history: { ...emptyHistory },
+  editInput: '',
 }
 
 let listeners: Set<() => void> = new Set()
@@ -74,6 +77,7 @@ export function resetTuiState() {
     result: undefined,
     history: { ...emptyHistory },
     exportMessage: undefined,
+    editInput: '',
   }
   listeners.forEach(fn => fn())
 }
@@ -440,7 +444,9 @@ function RunningStatus({ progress, elapsed }: { progress: number, elapsed: numbe
   )
 }
 
-function CommandBar({ phase, exportMessage }: { phase: Phase, exportMessage?: string }) {
+function CommandBar({ phase, exportMessage, editInput, connections }: { 
+  phase: Phase, exportMessage?: string, editInput: string, connections: number 
+}) {
   if (phase === 'running') {
     return (
       <box marginTop={1}>
@@ -457,12 +463,26 @@ function CommandBar({ phase, exportMessage }: { phase: Phase, exportMessage?: st
     )
   }
   
+  if (phase === 'editing') {
+    return (
+      <box flexDirection="column" marginTop={1}>
+        <text fg="#565f89">{'─'.repeat(60)}</text>
+        <box flexDirection="row" gap={1}>
+          <text fg="#e0af68">Connections:</text>
+          <text fg="#c0caf5">{editInput || connections}</text>
+          <text fg="#7aa2f7">█</text>
+        </box>
+        <text fg="#565f89">[0-9] type  [backspace] delete  [enter] confirm  [esc] cancel</text>
+      </box>
+    )
+  }
+  
   if (phase === 'complete') {
     return (
       <box flexDirection="column" marginTop={1}>
         <text fg="#565f89">{'─'.repeat(60)}</text>
         {exportMessage && <text fg="#9ece6a">{exportMessage}</text>}
-        <text fg="#7dcfff">[r] rerun  [e] export  [1-4] switch view  [q] quit</text>
+        <text fg="#7dcfff">[r] rerun  [c] connections  [e] export  [1-4] view  [q] quit</text>
       </box>
     )
   }
@@ -507,6 +527,24 @@ export function BenchmarkTui() {
       if (key.name === 'q' && state.onStop) {
         state.onStop()
       }
+    } else if (state.phase === 'editing') {
+      if (key.name === 'escape') {
+        updateTuiState({ phase: 'complete', editInput: '' })
+      } else if (key.name === 'return') {
+        const newConnections = parseInt(state.editInput, 10)
+        if (newConnections > 0 && state.onUpdateConnections) {
+          state.onUpdateConnections(newConnections)
+        } else {
+          updateTuiState({ phase: 'complete', editInput: '' })
+        }
+      } else if (key.name === 'backspace') {
+        updateTuiState({ editInput: state.editInput.slice(0, -1) })
+      } else if (/^[0-9]$/.test(key.name)) {
+        const newInput = state.editInput + key.name
+        if (parseInt(newInput, 10) <= 10000) {
+          updateTuiState({ editInput: newInput })
+        }
+      }
     } else if (state.phase === 'exporting') {
       if (key.name === 'j' && state.onExport) {
         state.onExport('json')
@@ -523,6 +561,8 @@ export function BenchmarkTui() {
     } else if (state.phase === 'complete') {
       if (key.name === 'r' && state.onRerun) {
         state.onRerun()
+      } else if (key.name === 'c') {
+        updateTuiState({ phase: 'editing', editInput: '' })
       } else if (key.name === 'e') {
         updateTuiState({ phase: 'exporting' })
       } else if (key.name === 'q' && state.onQuit) {
@@ -539,7 +579,7 @@ export function BenchmarkTui() {
         <text fg="#e0af68">Warming up...</text>
       )}
       
-      {(state.phase === 'running' || state.phase === 'complete' || state.phase === 'exporting') && (
+      {(state.phase === 'running' || state.phase === 'complete' || state.phase === 'exporting' || state.phase === 'editing') && (
         <>
           <TabBar currentView={state.view} phase={state.phase} />
           
@@ -562,7 +602,12 @@ export function BenchmarkTui() {
         </>
       )}
       
-      <CommandBar phase={state.phase} exportMessage={state.exportMessage} />
+      <CommandBar 
+        phase={state.phase} 
+        exportMessage={state.exportMessage} 
+        editInput={state.editInput}
+        connections={state.connections}
+      />
     </box>
   )
 }

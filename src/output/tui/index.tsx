@@ -11,6 +11,7 @@ interface TuiCallbacks {
   onRerun?: () => void
   onExport?: (format: 'json' | 'csv' | 'markdown') => void
   onQuit?: () => void
+  onUpdateConnections?: (connections: number) => void
 }
 
 export async function initTui(
@@ -37,6 +38,7 @@ export async function initTui(
     snapshot: undefined,
     result: undefined,
     exportMessage: undefined,
+    editInput: '',
     ...callbacks,
   })
   
@@ -63,6 +65,10 @@ export function tuiSetComplete(result: BenchmarkResult): void {
 
 export function tuiSetExportMessage(message: string): void {
   updateTuiState({ exportMessage: message })
+}
+
+export function tuiUpdateConnections(connections: number): void {
+  updateTuiState({ connections, editInput: '' })
 }
 
 export function tuiDestroy(): void {
