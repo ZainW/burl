@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.get_tag.outputs.tag }}
+      released: ${{ steps.get_tag.outputs.released }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,3 +49,26 @@ jobs:
 
       - name: Create GitHub Release
         run: bunx changelogen github release --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release tag
+        id: get_tag
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$TAG" ]; then
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "Released tag: $TAG"
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "No tag found"
+          fi
+
+  build:
+    name: Build Binaries
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    uses: ./.github/workflows/build-binaries.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+    permissions:
+      contents: write

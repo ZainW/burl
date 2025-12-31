@@ -1,6 +1,6 @@
 {
   "name": "@burl/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Modern HTTP benchmarking CLI tool with rich TUI and LLM-optimized output",
   "keywords": [
     "benchmark",

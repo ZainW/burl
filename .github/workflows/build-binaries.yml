@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_call:
+    inputs:
+      tag:
+        description: "Tag to build and upload to (e.g., v0.1.0)"
+        required: true
+        type: string
 
 jobs:
   build:
@@ -28,6 +34,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -39,7 +47,8 @@ jobs:
       - name: Build binary
         working-directory: packages/cli
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION=${TAG#v}
           echo "Building version $VERSION for ${{ matrix.target }}"
           bun build --compile --minify --sourcemap \
             --target=${{ matrix.target }} \
@@ -48,7 +57,9 @@ jobs:
             --outfile dist/${{ matrix.artifact }}
 
       - name: Upload to release
-        run: gh release upload ${{ github.ref_name }} packages/cli/dist/${{ matrix.artifact }} --clobber
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          gh release upload "$TAG" packages/cli/dist/${{ matrix.artifact }} --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -61,8 +72,9 @@ jobs:
     steps:
       - name: Download all artifacts
         run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
           mkdir -p dist
-          gh release download ${{ github.ref_name }} --dir dist --repo ${{ github.repository }}
+          gh release download "$TAG" --dir dist --repo ${{ github.repository }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -73,6 +85,8 @@ jobs:
           cat checksums.txt
 
       - name: Upload checksums
-        run: gh release upload ${{ github.ref_name }} dist/checksums.txt --clobber
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          gh release upload "$TAG" dist/checksums.txt --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
