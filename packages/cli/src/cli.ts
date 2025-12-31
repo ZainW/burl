@@ -2,15 +2,15 @@ import { cli } from "cleye";
 import type { CliOptions, BenchmarkConfig } from "./core/types";
 import { parseDuration } from "./utils/time";
 import { parseAuth } from "./core/auth";
+import { VERSION } from "./version";
 
 const name = "burl";
-const version = "0.1.0";
 
 export function parseArgs(args: string[]): CliOptions {
   const argv = cli(
     {
       name,
-      version,
+      version: VERSION,
       parameters: ["<url>"],
       flags: {
         method: {

@@ -41,7 +41,8 @@ describe("exportLlmJson", () => {
     const parsed = JSON.parse(json);
 
     expect(parsed.$schema).toBe("https://burl.dev/schema/v1/result.json");
-    expect(parsed.version).toBe("0.1.0");
+    expect(typeof parsed.version).toBe("string");
+    expect(parsed.version).toMatch(/^\d+\.\d+\.\d+/);
   });
 
   test("contains benchmark section", () => {

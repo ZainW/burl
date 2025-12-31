@@ -9,11 +9,18 @@ import { exportCsv } from "./output/export/csv";
 import { exportMarkdown } from "./output/export/markdown";
 import { exportLlmJson, exportLlmMarkdown } from "./output/export/llm";
 import { shouldUseTui } from "./utils/tty";
+import { VERSION } from "./version";
 import type { BenchmarkConfig } from "./core/types";
 import type { BenchmarkResult } from "./stats/types";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+
+  if (args[0] === "upgrade") {
+    const { upgrade } = await import("./commands/upgrade");
+    await upgrade();
+    process.exit(0);
+  }
 
   if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
     printHelp();
@@ -21,7 +28,7 @@ async function main(): Promise<void> {
   }
 
   if (args.includes("--version") || args.includes("-V")) {
-    console.log("burl v0.1.0");
+    console.log(`burl v${VERSION}`);
     process.exit(0);
   }
 

@@ -1,6 +1,7 @@
 import type { BenchmarkResult } from "../../stats/types";
 import { formatDuration } from "../../utils/time";
 import { formatThroughput } from "../../utils/bytes";
+import { VERSION } from "../../version";
 
 interface LlmJsonOutput {
   $schema: string;
@@ -48,7 +49,7 @@ export function exportLlmJson(result: BenchmarkResult): string {
 
   const output: LlmJsonOutput = {
     $schema: "https://burl.dev/schema/v1/result.json",
-    version: "0.1.0",
+    version: VERSION,
     benchmark: {
       url: result.url,
       method: result.method,

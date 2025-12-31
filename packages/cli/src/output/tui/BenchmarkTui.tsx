@@ -1,11 +1,18 @@
 import type { BenchmarkResult, StatsSnapshot } from "../../stats/types";
 import { formatLatency, formatDuration } from "../../utils/time";
 import { formatBytes, formatThroughput } from "../../utils/bytes";
+import { VERSION } from "../../version";
 import { useState, useEffect } from "react";
 import { useKeyboard } from "@opentui/react";
 
 type Phase = "idle" | "warmup" | "running" | "complete" | "exporting" | "editing";
 type MetricView = "overview" | "rps" | "latency" | "throughput";
+type UpgradeStatus =
+  | { status: "current" }
+  | { status: "checking" }
+  | { status: "downloading"; version: string }
+  | { status: "ready"; version: string }
+  | { status: "failed"; error: string };
 
 interface MetricHistory {
   rps: number[];
@@ -34,6 +41,7 @@ interface TuiState {
   onUpdateConnections?: (connections: number) => void;
   exportMessage?: string;
   editInput: string;
+  upgradeStatus: UpgradeStatus;
 }
 
 const emptyHistory: MetricHistory = {
@@ -54,6 +62,7 @@ let globalState: TuiState = {
   progress: 0,
   history: { ...emptyHistory },
   editInput: "",
+  upgradeStatus: { status: "current" },
 };
 
 let listeners: Set<() => void> = new Set();
@@ -79,6 +88,11 @@ export function resetTuiState() {
     exportMessage: undefined,
     editInput: "",
   };
+  listeners.forEach((fn) => fn());
+}
+
+export function setUpgradeStatus(status: UpgradeStatus) {
+  globalState = { ...globalState, upgradeStatus: status };
   listeners.forEach((fn) => fn());
 }
 
@@ -195,7 +209,7 @@ function Header({
     <box flexDirection="column" marginBottom={1}>
       <text>
         <span fg="#7aa2f7">burl</span>
-        <span fg="#565f89"> v0.1.0</span>
+        <span fg="#565f89"> v{VERSION}</span>
       </text>
       <text>
         <span fg="#7dcfff">Target: </span>
@@ -583,6 +597,26 @@ function RunningStatus({ progress, elapsed }: { progress: number; elapsed: numbe
   );
 }
 
+function UpgradeNotification({ status }: { status: UpgradeStatus }) {
+  if (status.status === "ready") {
+    return (
+      <box marginTop={1}>
+        <text fg="#9ece6a">✓ Updated to v{status.version} — restart burl to use</text>
+      </box>
+    );
+  }
+
+  if (status.status === "downloading") {
+    return (
+      <box marginTop={1}>
+        <text fg="#565f89">↓ Downloading v{status.version}...</text>
+      </box>
+    );
+  }
+
+  return null;
+}
+
 function CommandBar({
   phase,
   exportMessage,
@@ -764,6 +798,8 @@ export function BenchmarkTui() {
         editInput={state.editInput}
         connections={state.connections}
       />
+
+      {state.phase === "complete" && <UpgradeNotification status={state.upgradeStatus} />}
     </box>
   );
 }

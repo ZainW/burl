@@ -7,7 +7,9 @@ import {
   getTuiState,
   resetTuiState,
   appendMetricHistory,
+  setUpgradeStatus,
 } from "./BenchmarkTui";
+import { backgroundUpgrade } from "../../commands/auto-upgrade";
 
 let renderer: CliRenderer | null = null;
 let root: ReturnType<typeof createRoot> | null = null;
@@ -49,6 +51,8 @@ export async function initTui(
   });
 
   root.render(<BenchmarkTui />);
+
+  backgroundUpgrade(setUpgradeStatus);
 }
 
 export function tuiSetWarmup(): void {

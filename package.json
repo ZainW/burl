@@ -27,5 +27,31 @@
   },
   "engines": {
     "bun": ">=1.3.5"
+  },
+  "changelogen": {
+    "output": "CHANGELOG.md",
+    "types": {
+      "feat": {
+        "title": "🚀 Features"
+      },
+      "fix": {
+        "title": "🐛 Bug Fixes"
+      },
+      "perf": {
+        "title": "⚡ Performance"
+      },
+      "refactor": {
+        "title": "♻️ Refactors"
+      },
+      "docs": {
+        "title": "📖 Documentation"
+      },
+      "chore": {
+        "title": "🏡 Chore"
+      },
+      "test": {
+        "title": "✅ Tests"
+      }
+    }
   }
 }
