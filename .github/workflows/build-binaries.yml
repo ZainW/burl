@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     name: Build ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
     strategy:
@@ -23,14 +23,19 @@ jobs:
         include:
           - target: bun-linux-x64
             artifact: burl-linux-x64
+            os: ubuntu-latest
           - target: bun-linux-arm64
             artifact: burl-linux-arm64
+            os: ubuntu-24.04-arm
           - target: bun-darwin-x64
             artifact: burl-darwin-x64
+            os: macos-13
           - target: bun-darwin-arm64
             artifact: burl-darwin-arm64
+            os: macos-latest
           - target: bun-windows-x64
             artifact: burl-windows-x64.exe
+            os: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +51,7 @@ jobs:
 
       - name: Build binary
         working-directory: packages/cli
+        shell: bash
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
           VERSION=${TAG#v}
@@ -57,6 +63,7 @@ jobs:
             --outfile dist/${{ matrix.artifact }}
 
       - name: Upload to release
+        shell: bash
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
           gh release upload "$TAG" packages/cli/dist/${{ matrix.artifact }} --clobber
