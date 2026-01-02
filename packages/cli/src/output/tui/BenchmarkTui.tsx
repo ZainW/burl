@@ -3,16 +3,33 @@ import { formatLatency, formatDuration } from "../../utils/time";
 import { formatBytes, formatThroughput } from "../../utils/bytes";
 import { VERSION } from "../../version";
 import { useState, useEffect } from "react";
-import { useKeyboard } from "@opentui/react";
+import { useKeyboard, useTerminalDimensions } from "@opentui/react";
+import { theme } from "./theme";
 
 type Phase = "idle" | "warmup" | "running" | "complete" | "exporting" | "editing";
 type MetricView = "overview" | "rps" | "latency" | "throughput";
+type LayoutMode = "compact" | "normal" | "wide";
 type UpgradeStatus =
   | { status: "current" }
   | { status: "checking" }
   | { status: "downloading"; version: string }
   | { status: "ready"; version: string }
   | { status: "failed"; error: string };
+
+const colors = {
+  primary: theme.primary,
+  secondary: theme.secondary,
+  accent: theme.accent,
+  success: theme.success,
+  warning: theme.warning,
+  error: theme.error,
+  text: theme.text,
+  textMuted: theme.textMuted,
+  textDim: theme.textDim,
+  border: theme.border,
+  borderMuted: theme.borderMuted,
+  info: theme.accent,
+};
 
 interface MetricHistory {
   rps: number[];
@@ -125,22 +142,29 @@ function useTuiState(): TuiState {
   return state;
 }
 
+function getLayoutMode(width: number): LayoutMode {
+  if (width < 80) return "compact";
+  if (width > 120) return "wide";
+  return "normal";
+}
+
 const SPARKLINE_CHARS = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 
 function Sparkline({
   values,
-  width = 50,
-  color = "#7aa2f7",
+  width,
+  color = colors.primary,
   label,
 }: {
   values: number[];
-  width?: number;
+  width: number;
   color?: string;
   label?: string;
 }) {
-  if (values.length === 0) return <text fg="#565f89">Collecting data...</text>;
+  if (values.length === 0) return <text fg={colors.textMuted}>Collecting data...</text>;
 
-  const recent = values.slice(-width);
+  const chartWidth = Math.max(20, width - 4);
+  const recent = values.slice(-chartWidth);
   const min = Math.min(...recent);
   const max = Math.max(...recent);
   const range = max - min || 1;
@@ -157,15 +181,22 @@ function Sparkline({
     .join("");
 
   const curr = recent[recent.length - 1] ?? 0;
+  const prev = recent[recent.length - 2];
+  const trend = recent.length > 1 && prev !== undefined ? (curr > prev ? "↑" : "↓") : "";
+  const trendColor = prev !== undefined && curr > prev ? colors.success : colors.warning;
 
   return (
     <box flexDirection="column">
-      {label && <text fg="#7dcfff">{label}</text>}
+      {label && (
+        <text fg={colors.secondary}>
+          {label} {trend && <span fg={trendColor}>{trend}</span>}
+        </text>
+      )}
       <text fg={color}>{sparkline}</text>
-      <box flexDirection="row" gap={3}>
-        <text fg="#565f89">min: {formatValue(min, label)}</text>
-        <text fg="#565f89">max: {formatValue(max, label)}</text>
-        <text fg="#9ece6a">current: {formatValue(curr, label)}</text>
+      <box flexDirection="row" gap={2}>
+        <text fg={colors.textMuted}>min: {formatValue(min, label)}</text>
+        <text fg={colors.textMuted}>max: {formatValue(max, label)}</text>
+        <text fg={colors.success}>now: {formatValue(curr, label)}</text>
       </box>
     </box>
   );
@@ -184,14 +215,16 @@ function formatValue(value: number, label?: string): string {
   return value.toFixed(1);
 }
 
-function ProgressBar({ progress, width = 40 }: { progress: number; width?: number }) {
-  const filled = Math.round(progress * width);
-  const empty = width - filled;
+function ProgressBar({ progress, width }: { progress: number; width: number }) {
+  const barWidth = Math.max(20, width - 10);
+  const filled = Math.round(progress * barWidth);
+  const empty = barWidth - filled;
   const bar = "█".repeat(filled) + "░".repeat(empty);
   const pct = Math.round(progress * 100);
   return (
-    <text fg="#7aa2f7">
-      {bar} {pct}%
+    <text>
+      <span fg={colors.primary}>{bar}</span>
+      <span fg={colors.text}> {pct}%</span>
     </text>
   );
 }
@@ -200,62 +233,100 @@ function Header({
   url,
   method,
   connections,
+  duration,
+  layout,
 }: {
   url: string;
   method: string;
   connections: number;
+  duration?: number;
+  layout: LayoutMode;
 }) {
+  const truncatedUrl = layout === "compact" && url.length > 40 ? url.slice(0, 37) + "..." : url;
+
   return (
-    <box flexDirection="column" marginBottom={1}>
-      <text>
-        <span fg="#7aa2f7">burl</span>
-        <span fg="#565f89"> v{VERSION}</span>
-      </text>
-      <text>
-        <span fg="#7dcfff">Target: </span>
-        <span fg="#c0caf5">
-          {method} {url}
-        </span>
-      </text>
-      <text>
-        <span fg="#7dcfff">Connections: </span>
-        <span fg="#c0caf5">{connections}</span>
-      </text>
+    <box
+      flexDirection="column"
+      border
+      borderStyle="rounded"
+      borderColor={colors.primary}
+      padding={1}
+      marginBottom={1}
+    >
+      <box flexDirection="row" justifyContent="space-between">
+        <text>
+          <span fg={colors.primary}>burl</span>
+          <span fg={colors.textMuted}> v{VERSION}</span>
+        </text>
+        {layout !== "compact" && (
+          <text fg={colors.textMuted}>
+            {connections} connection{connections === 1 ? "" : "s"}
+            {duration ? ` · ${formatDuration(duration)}` : ""}
+          </text>
+        )}
+      </box>
+      <box flexDirection="row" gap={1} marginTop={1}>
+        <text>
+          <span fg={colors.warning}>{method}</span>
+        </text>
+        <text fg={colors.text}>{truncatedUrl}</text>
+      </box>
     </box>
   );
 }
 
-function TabBar({ currentView, phase: _phase }: { currentView: MetricView; phase: Phase }) {
-  const tabs: { key: string; view: MetricView; label: string }[] = [
-    { key: "1", view: "overview", label: "Overview" },
-    { key: "2", view: "rps", label: "RPS" },
-    { key: "3", view: "latency", label: "Latency" },
-    { key: "4", view: "throughput", label: "Throughput" },
+function TabBar({
+  currentView,
+  layout,
+}: {
+  currentView: MetricView;
+  layout: LayoutMode;
+}) {
+  const tabs: { key: string; view: MetricView; label: string; short: string }[] = [
+    { key: "1", view: "overview", label: "Overview", short: "Ovw" },
+    { key: "2", view: "rps", label: "RPS", short: "RPS" },
+    { key: "3", view: "latency", label: "Latency", short: "Lat" },
+    { key: "4", view: "throughput", label: "Throughput", short: "Thr" },
   ];
 
   return (
-    <box flexDirection="row" gap={1} marginBottom={1}>
+    <box flexDirection="row" gap={2} marginBottom={1}>
       {tabs.map((tab) => (
         <text key={tab.key}>
-          <span fg={currentView === tab.view ? "#7aa2f7" : "#565f89"}>
-            [{tab.key}] {tab.label}
+          <span fg={currentView === tab.view ? colors.primary : colors.textMuted}>
+            [{tab.key}] {layout === "compact" ? tab.short : tab.label}
           </span>
         </text>
       ))}
-      <text fg="#565f89"> | [tab] cycle</text>
+      {layout !== "compact" && <text fg={colors.textDim}> │ [tab] cycle</text>}
     </box>
   );
 }
 
-function StatsTable({ rows }: { rows: { label: string; value: string; color?: string }[] }) {
+function StatRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <box flexDirection="column">
-      {rows.map((row, i) => (
-        <text key={i}>
-          <span fg="#565f89">{row.label.padEnd(12)}</span>
-          <span fg={row.color || "#c0caf5"}>{row.value}</span>
-        </text>
-      ))}
+    <box flexDirection="row">
+      <text fg={colors.textMuted}>{label.padEnd(10)}</text>
+      <text fg={color || colors.text}>{value}</text>
+    </box>
+  );
+}
+
+function MetricsPanel({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: string; color?: string }[];
+}) {
+  return (
+    <box flexDirection="column" flexGrow={1}>
+      <text fg={colors.secondary}>{title}</text>
+      <box flexDirection="column" marginTop={1}>
+        {rows.map((row, i) => (
+          <StatRow key={i} label={row.label} value={row.value} color={row.color} />
+        ))}
+      </box>
     </box>
   );
 }
@@ -264,93 +335,107 @@ function OverviewView({
   snapshot,
   history,
   result,
+  width,
+  layout,
 }: {
   snapshot?: StatsSnapshot;
   history: MetricHistory;
   result?: BenchmarkResult;
+  width: number;
+  layout: LayoutMode;
 }) {
   const data = result || snapshot;
-  if (!data) return <text fg="#565f89">Waiting for data...</text>;
+  if (!data) return <text fg={colors.textMuted}>Waiting for data...</text>;
 
   const isComplete = !!result;
+  const chartWidth = layout === "wide" ? Math.floor((width - 8) / 2) : width - 6;
+
+  const requestsRows = [
+    {
+      label: "Total",
+      value: (result?.totalRequests ?? snapshot?.totalRequests ?? 0).toLocaleString(),
+    },
+    {
+      label: "Success",
+      value: (result?.successfulRequests ?? snapshot?.successfulRequests ?? 0).toLocaleString(),
+      color: colors.success,
+    },
+    {
+      label: "Failed",
+      value: (result?.failedRequests ?? snapshot?.failedRequests ?? 0).toLocaleString(),
+      color: (result?.failedRequests ?? snapshot?.failedRequests ?? 0) > 0 ? colors.error : colors.textMuted,
+    },
+    {
+      label: "RPS",
+      value: (result?.requestsPerSecond ?? snapshot?.currentRps ?? 0).toFixed(1),
+      color: colors.info,
+    },
+  ];
+
+  const latencyRows = [
+    { label: "P50", value: formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0) },
+    { label: "P99", value: formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0) },
+    { label: "Mean", value: formatLatency(result?.latency.mean ?? 0) },
+    { label: "Max", value: formatLatency(result?.latency.max ?? 0), color: colors.warning },
+  ];
+
+  const dataRows = [
+    { label: "Total", value: formatBytes(result?.totalBytes ?? 0) },
+    { label: "Throughput", value: formatThroughput(result?.bytesPerSecond ?? 0) },
+    { label: "Duration", value: formatDuration(result?.durationMs ?? snapshot?.elapsedMs ?? 0) },
+  ];
 
   return (
-    <box flexDirection="column">
-      <box flexDirection="row" gap={4}>
-        <box flexDirection="column">
-          <text fg="#7dcfff">Requests</text>
-          <StatsTable
-            rows={[
-              {
-                label: "Total",
-                value: (result?.totalRequests ?? snapshot?.totalRequests ?? 0).toLocaleString(),
-              },
-              {
-                label: "Success",
-                value: (
-                  result?.successfulRequests ??
-                  snapshot?.successfulRequests ??
-                  0
-                ).toLocaleString(),
-                color: "#9ece6a",
-              },
-              {
-                label: "Failed",
-                value: (result?.failedRequests ?? snapshot?.failedRequests ?? 0).toLocaleString(),
-                color:
-                  (result?.failedRequests ?? snapshot?.failedRequests ?? 0) > 0
-                    ? "#f7768e"
-                    : "#565f89",
-              },
-              {
-                label: "RPS",
-                value: (result?.requestsPerSecond ?? snapshot?.currentRps ?? 0).toFixed(1),
-              },
-            ]}
-          />
-        </box>
-
-        <box flexDirection="column">
-          <text fg="#7dcfff">Latency</text>
-          <StatsTable
-            rows={[
-              {
-                label: "P50",
-                value: formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0),
-              },
-              {
-                label: "P99",
-                value: formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0),
-              },
-              { label: "Mean", value: formatLatency(result?.latency.mean ?? 0) },
-              { label: "Max", value: formatLatency(result?.latency.max ?? 0) },
-            ]}
-          />
-        </box>
-
-        <box flexDirection="column">
-          <text fg="#7dcfff">Data</text>
-          <StatsTable
-            rows={[
-              { label: "Total", value: formatBytes(result?.totalBytes ?? 0) },
-              { label: "Throughput", value: formatThroughput(result?.bytesPerSecond ?? 0) },
-              {
-                label: "Duration",
-                value: formatDuration(result?.durationMs ?? snapshot?.elapsedMs ?? 0),
-              },
-            ]}
-          />
-        </box>
+    <box flexDirection="column" gap={1}>
+      <box
+        flexDirection="row"
+        gap={2}
+        border
+        borderStyle="rounded"
+        borderColor={colors.borderMuted}
+        padding={1}
+      >
+        <MetricsPanel title="Requests" rows={requestsRows} />
+        <MetricsPanel title="Latency" rows={latencyRows} />
+        {layout !== "compact" && <MetricsPanel title="Data" rows={dataRows} />}
       </box>
 
       {history.rps.length > 1 && (
-        <box flexDirection="column" marginTop={1}>
-          <Sparkline values={history.rps} label="RPS Trend" color="#9ece6a" />
+        <box flexDirection={layout === "wide" ? "row" : "column"} gap={1}>
+          <box
+            flexGrow={1}
+            border
+            borderStyle="rounded"
+            borderColor={colors.borderMuted}
+            padding={1}
+          >
+            <Sparkline values={history.rps} label="RPS Trend" color={colors.success} width={chartWidth} />
+          </box>
+          {layout === "wide" && (
+            <box
+              flexGrow={1}
+              border
+              borderStyle="rounded"
+              borderColor={colors.borderMuted}
+              padding={1}
+            >
+              <Sparkline
+                values={history.latencyP50}
+                label="P50 Latency"
+                color={colors.primary}
+                width={chartWidth}
+              />
+            </box>
+          )}
         </box>
       )}
 
       {isComplete && result && (
         <StatusCodes statusCodes={result.statusCodes} total={result.totalRequests} />
+      )}
+
+      {isComplete && result && result.failedRequests > 0 && result.errors && (
+        <ErrorsPanel errors={result.errors} total={result.failedRequests} layout={layout} />
       )}
     </box>
   );
@@ -360,48 +445,60 @@ function RpsView({
   snapshot,
   history,
   result,
+  width,
+  layout,
 }: {
   snapshot?: StatsSnapshot;
   history: MetricHistory;
   result?: BenchmarkResult;
+  width: number;
+  layout: LayoutMode;
 }) {
   const currentRps = result?.requestsPerSecond ?? snapshot?.currentRps ?? 0;
   const avgRps =
     history.rps.length > 0 ? history.rps.reduce((a, b) => a + b, 0) / history.rps.length : 0;
   const maxRps = history.rps.length > 0 ? Math.max(...history.rps) : 0;
   const minRps = history.rps.length > 0 ? Math.min(...history.rps) : 0;
+  const chartWidth = width - 6;
 
   return (
-    <box flexDirection="column">
-      <text fg="#7dcfff">Requests Per Second</text>
-
-      <box flexDirection="row" gap={4} marginTop={1}>
-        <StatsTable
-          rows={[
-            { label: "Current", value: currentRps.toFixed(1), color: "#9ece6a" },
-            { label: "Average", value: avgRps.toFixed(1) },
-            { label: "Min", value: minRps.toFixed(1) },
-            { label: "Max", value: maxRps.toFixed(1) },
-          ]}
-        />
-
+    <box flexDirection="column" gap={1}>
+      <box
+        flexDirection="row"
+        gap={3}
+        border
+        borderStyle="rounded"
+        borderColor={colors.borderMuted}
+        padding={1}
+      >
         <box flexDirection="column">
-          <text fg="#565f89">Variance: {(maxRps - minRps).toFixed(1)}</text>
-          <text fg="#565f89">Samples: {history.rps.length}</text>
+          <text fg={colors.secondary}>Requests Per Second</text>
+          <box flexDirection="row" gap={3} marginTop={1}>
+            <StatRow label="Current" value={currentRps.toFixed(1)} color={colors.success} />
+            <StatRow label="Average" value={avgRps.toFixed(1)} />
+            <StatRow label="Min" value={minRps.toFixed(1)} />
+            <StatRow label="Max" value={maxRps.toFixed(1)} />
+          </box>
         </box>
+        {layout !== "compact" && (
+          <box flexDirection="column">
+            <text fg={colors.textMuted}>Variance: {(maxRps - minRps).toFixed(1)}</text>
+            <text fg={colors.textMuted}>Samples: {history.rps.length}</text>
+          </box>
+        )}
       </box>
 
-      <box marginTop={1}>
-        <Sparkline values={history.rps} label="RPS Over Time" color="#9ece6a" width={60} />
+      <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
+        <Sparkline values={history.rps} label="RPS Over Time" color={colors.success} width={chartWidth} />
       </box>
 
       {history.successRate.length > 0 && (
-        <box marginTop={1}>
+        <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
           <Sparkline
             values={history.successRate}
             label="Success Rate %"
-            color="#7aa2f7"
-            width={60}
+            color={colors.primary}
+            width={chartWidth}
           />
         </box>
       )}
@@ -413,67 +510,75 @@ function LatencyView({
   snapshot,
   history,
   result,
+  width,
+  layout,
 }: {
   snapshot?: StatsSnapshot;
   history: MetricHistory;
   result?: BenchmarkResult;
+  width: number;
+  layout: LayoutMode;
 }) {
+  const chartWidth = layout === "wide" ? Math.floor((width - 10) / 2) : width - 6;
+
   return (
-    <box flexDirection="column">
-      <text fg="#7dcfff">Latency Distribution</text>
-
-      <box flexDirection="row" gap={4} marginTop={1}>
-        <box flexDirection="column">
-          <text fg="#565f89">Percentiles</text>
-          <StatsTable
-            rows={[
-              { label: "Min", value: formatLatency(result?.latency.min ?? 0) },
-              {
-                label: "P50",
-                value: formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0),
-              },
-              { label: "P75", value: formatLatency(result?.latency.p75 ?? 0) },
-              { label: "P90", value: formatLatency(result?.latency.p90 ?? 0) },
-              { label: "P95", value: formatLatency(result?.latency.p95 ?? 0) },
-              {
-                label: "P99",
-                value: formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0),
-              },
-              { label: "Max", value: formatLatency(result?.latency.max ?? 0) },
-            ]}
-          />
+    <box flexDirection="column" gap={1}>
+      <box
+        flexDirection="row"
+        gap={2}
+        border
+        borderStyle="rounded"
+        borderColor={colors.borderMuted}
+        padding={1}
+      >
+        <box flexDirection="column" flexGrow={1}>
+          <text fg={colors.secondary}>Percentiles</text>
+          <box flexDirection={layout === "compact" ? "column" : "row"} gap={layout === "compact" ? 0 : 3} marginTop={1}>
+            <box flexDirection="column">
+              <StatRow label="Min" value={formatLatency(result?.latency.min ?? 0)} />
+              <StatRow label="P50" value={formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0)} />
+              <StatRow label="P75" value={formatLatency(result?.latency.p75 ?? 0)} />
+              <StatRow label="P90" value={formatLatency(result?.latency.p90 ?? 0)} />
+            </box>
+            <box flexDirection="column">
+              <StatRow label="P95" value={formatLatency(result?.latency.p95 ?? 0)} />
+              <StatRow label="P99" value={formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0)} color={colors.warning} />
+              <StatRow label="Max" value={formatLatency(result?.latency.max ?? 0)} color={colors.error} />
+            </box>
+          </box>
         </box>
 
-        <box flexDirection="column">
-          <text fg="#565f89">Statistics</text>
-          <StatsTable
-            rows={[
-              { label: "Mean", value: formatLatency(result?.latency.mean ?? 0) },
-              { label: "StdDev", value: formatLatency(result?.latency.stddev ?? 0) },
-            ]}
+        {layout !== "compact" && (
+          <box flexDirection="column">
+            <text fg={colors.secondary}>Statistics</text>
+            <box flexDirection="column" marginTop={1}>
+              <StatRow label="Mean" value={formatLatency(result?.latency.mean ?? 0)} />
+              <StatRow label="StdDev" value={formatLatency(result?.latency.stddev ?? 0)} />
+            </box>
+          </box>
+        )}
+      </box>
+
+      <box flexDirection={layout === "wide" ? "row" : "column"} gap={1}>
+        <box flexGrow={1} border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
+          <Sparkline
+            values={history.latencyP50}
+            label="P50 Latency"
+            color={colors.primary}
+            width={chartWidth}
+          />
+        </box>
+        <box flexGrow={1} border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
+          <Sparkline
+            values={history.latencyP99}
+            label="P99 Latency"
+            color={colors.error}
+            width={chartWidth}
           />
         </box>
       </box>
 
-      <box marginTop={1}>
-        <Sparkline
-          values={history.latencyP50}
-          label="P50 Latency Over Time"
-          color="#7aa2f7"
-          width={60}
-        />
-      </box>
-
-      <box marginTop={1}>
-        <Sparkline
-          values={history.latencyP99}
-          label="P99 Latency Over Time"
-          color="#f7768e"
-          width={60}
-        />
-      </box>
-
-      {result && <LatencyHistogram result={result} />}
+      {result && <LatencyHistogram result={result} width={width} />}
     </box>
   );
 }
@@ -482,74 +587,88 @@ function ThroughputView({
   snapshot: _snapshot,
   history,
   result,
+  width,
+  layout: _layout,
 }: {
   snapshot?: StatsSnapshot;
   history: MetricHistory;
   result?: BenchmarkResult;
+  width: number;
+  layout: LayoutMode;
 }) {
   const avgThroughput =
     history.throughput.length > 0
       ? history.throughput.reduce((a, b) => a + b, 0) / history.throughput.length
       : 0;
+  const chartWidth = width - 6;
 
   return (
-    <box flexDirection="column">
-      <text fg="#7dcfff">Data Throughput</text>
-
-      <box flexDirection="row" gap={4} marginTop={1}>
-        <StatsTable
-          rows={[
-            {
-              label: "Current",
-              value: formatThroughput(history.throughput[history.throughput.length - 1] ?? 0),
-              color: "#9ece6a",
-            },
-            { label: "Average", value: formatThroughput(avgThroughput) },
-            { label: "Total Data", value: formatBytes(result?.totalBytes ?? 0) },
-          ]}
-        />
+    <box flexDirection="column" gap={1}>
+      <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
+        <box flexDirection="column">
+          <text fg={colors.secondary}>Data Throughput</text>
+          <box flexDirection="row" gap={3} marginTop={1}>
+            <StatRow
+              label="Current"
+              value={formatThroughput(history.throughput[history.throughput.length - 1] ?? 0)}
+              color={colors.success}
+            />
+            <StatRow label="Average" value={formatThroughput(avgThroughput)} />
+            <StatRow label="Total" value={formatBytes(result?.totalBytes ?? 0)} />
+          </box>
+        </box>
       </box>
 
-      <box marginTop={1}>
+      <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
         <Sparkline
           values={history.throughput}
           label="Throughput Over Time"
-          color="#e0af68"
-          width={60}
+          color={colors.warning}
+          width={chartWidth}
         />
       </box>
     </box>
   );
 }
 
-function LatencyHistogram({ result }: { result: BenchmarkResult }) {
+function LatencyHistogram({
+  result,
+  width,
+}: {
+  result: BenchmarkResult;
+  width: number;
+}) {
   const buckets = [
-    { label: "P50", value: result.latency.p50, color: "#9ece6a" },
-    { label: "P75", value: result.latency.p75, color: "#7aa2f7" },
-    { label: "P90", value: result.latency.p90, color: "#7dcfff" },
-    { label: "P95", value: result.latency.p95, color: "#e0af68" },
-    { label: "P99", value: result.latency.p99, color: "#f7768e" },
+    { label: "P50", value: result.latency.p50, color: colors.success },
+    { label: "P75", value: result.latency.p75, color: colors.primary },
+    { label: "P90", value: result.latency.p90, color: colors.info },
+    { label: "P95", value: result.latency.p95, color: colors.warning },
+    { label: "P99", value: result.latency.p99, color: colors.error },
   ];
 
   const maxValue = Math.max(...buckets.map((b) => b.value));
-  const barWidth = 30;
+  const barWidth = Math.min(40, width - 25);
 
   return (
-    <box flexDirection="column" marginTop={1}>
-      <text fg="#565f89">Histogram</text>
-      {buckets.map((bucket) => {
-        const width = Math.max(1, Math.round((bucket.value / maxValue) * barWidth));
-        const bar = "▓".repeat(width);
-        return (
-          <box key={bucket.label} flexDirection="row">
-            <text fg="#565f89" style={{ width: 4 }}>
-              {bucket.label}
-            </text>
-            <text fg={bucket.color}> {bar}</text>
-            <text fg="#c0caf5"> {formatLatency(bucket.value)}</text>
-          </box>
-        );
-      })}
+    <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
+      <box flexDirection="column">
+        <text fg={colors.secondary}>Latency Distribution</text>
+        <box flexDirection="column" marginTop={1}>
+          {buckets.map((bucket) => {
+            const barLen = Math.max(1, Math.round((bucket.value / maxValue) * barWidth));
+            const bar = "▓".repeat(barLen);
+            return (
+              <box key={bucket.label} flexDirection="row">
+                <text fg={colors.textMuted} style={{ width: 5 }}>
+                  {bucket.label}
+                </text>
+                <text fg={bucket.color}>{bar}</text>
+                <text fg={colors.text}> {formatLatency(bucket.value)}</text>
+              </box>
+            );
+          })}
+        </box>
+      </box>
     </box>
   );
 }
@@ -565,33 +684,89 @@ function StatusCodes({
   if (entries.length === 0) return null;
 
   return (
-    <box flexDirection="column" marginTop={1}>
-      <text fg="#7dcfff">Status Codes</text>
-      <box flexDirection="row" gap={2}>
-        {entries.map(([code, count]) => {
-          const codeNum = Number(code);
-          const color = codeNum < 300 ? "#9ece6a" : codeNum < 400 ? "#e0af68" : "#f7768e";
-          const pct = ((count / total) * 100).toFixed(0);
-          return (
-            <text key={code}>
-              <span fg={color}>{code}</span>
-              <span fg="#565f89">
-                : {count} ({pct}%)
-              </span>
-            </text>
-          );
-        })}
+    <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
+      <box flexDirection="column">
+        <text fg={colors.secondary}>Status Codes</text>
+        <box flexDirection="row" gap={2} marginTop={1} flexWrap="wrap">
+          {entries.map(([code, count]) => {
+            const codeNum = Number(code);
+            const color = codeNum < 300 ? colors.success : codeNum < 400 ? colors.warning : colors.error;
+            const pct = ((count / total) * 100).toFixed(0);
+            return (
+              <text key={code}>
+                <span fg={color}>{code}</span>
+                <span fg={colors.textMuted}>
+                  : {count.toLocaleString()} ({pct}%)
+                </span>
+              </text>
+            );
+          })}
+        </box>
       </box>
     </box>
   );
 }
 
-function RunningStatus({ progress, elapsed }: { progress: number; elapsed: number }) {
+function ErrorsPanel({
+  errors,
+  total,
+  layout,
+}: {
+  errors: Record<string, number>;
+  total: number;
+  layout: LayoutMode;
+}) {
+  const entries = Object.entries(errors).sort(([, a], [, b]) => b - a);
+  if (entries.length === 0) return null;
+
   return (
-    <box flexDirection="column" marginBottom={1}>
-      <box flexDirection="row" gap={2}>
-        <ProgressBar progress={progress} />
-        <text fg="#565f89">{formatDuration(elapsed)}</text>
+    <box border borderStyle="rounded" borderColor={colors.error} padding={1}>
+      <box flexDirection="column">
+        <text fg={colors.error}>Errors ({total.toLocaleString()} total)</text>
+        <box flexDirection="column" marginTop={1}>
+          {entries.slice(0, layout === "compact" ? 3 : 5).map(([error, count]) => {
+            const pct = ((count / total) * 100).toFixed(0);
+            return (
+              <text key={error} fg={colors.textMuted}>
+                {error}: {count.toLocaleString()} ({pct}%)
+              </text>
+            );
+          })}
+        </box>
+      </box>
+    </box>
+  );
+}
+
+function RunningStatus({
+  progress,
+  elapsed,
+  snapshot,
+  width,
+}: {
+  progress: number;
+  elapsed: number;
+  snapshot?: StatsSnapshot;
+  width: number;
+}) {
+  return (
+    <box
+      flexDirection="column"
+      border
+      borderStyle="rounded"
+      borderColor={colors.primary}
+      padding={1}
+      marginBottom={1}
+    >
+      <box flexDirection="row" justifyContent="space-between">
+        <text fg={colors.info}>Running benchmark...</text>
+        <text fg={colors.textMuted}>
+          {formatDuration(elapsed)}
+          {snapshot && ` · ${snapshot.currentRps.toFixed(0)} req/s`}
+        </text>
+      </box>
+      <box marginTop={1}>
+        <ProgressBar progress={progress} width={width - 4} />
       </box>
     </box>
   );
@@ -601,7 +776,7 @@ function UpgradeNotification({ status }: { status: UpgradeStatus }) {
   if (status.status === "ready") {
     return (
       <box marginTop={1}>
-        <text fg="#9ece6a">✓ Updated to v{status.version} — restart burl to use</text>
+        <text fg={colors.success}>✓ Updated to v{status.version} — restart burl to use</text>
       </box>
     );
   }
@@ -609,7 +784,7 @@ function UpgradeNotification({ status }: { status: UpgradeStatus }) {
   if (status.status === "downloading") {
     return (
       <box marginTop={1}>
-        <text fg="#565f89">↓ Downloading v{status.version}...</text>
+        <text fg={colors.textMuted}>↓ Downloading v{status.version}...</text>
       </box>
     );
   }
@@ -622,16 +797,22 @@ function CommandBar({
   exportMessage,
   editInput,
   connections,
+  layout,
 }: {
   phase: Phase;
   exportMessage?: string;
   editInput: string;
   connections: number;
+  layout: LayoutMode;
 }) {
+  const divider = layout === "compact" ? "" : "─".repeat(60);
+
   if (phase === "running") {
     return (
       <box marginTop={1}>
-        <text fg="#565f89">[q] stop early [1-4] switch view [tab] cycle</text>
+        <text fg={colors.textMuted}>
+          {layout === "compact" ? "[q] stop" : "[q] stop early  [1-4] switch view  [tab] cycle"}
+        </text>
       </box>
     );
   }
@@ -639,7 +820,7 @@ function CommandBar({
   if (phase === "exporting") {
     return (
       <box marginTop={1}>
-        <text fg="#e0af68">[j] JSON [c] CSV [m] Markdown [esc] cancel</text>
+        <text fg={colors.warning}>[j] JSON  [c] CSV  [m] Markdown  [esc] cancel</text>
       </box>
     );
   }
@@ -647,13 +828,17 @@ function CommandBar({
   if (phase === "editing") {
     return (
       <box flexDirection="column" marginTop={1}>
-        <text fg="#565f89">{"─".repeat(60)}</text>
+        {divider && <text fg={colors.textMuted}>{divider}</text>}
         <box flexDirection="row" gap={1}>
-          <text fg="#e0af68">Connections:</text>
-          <text fg="#c0caf5">{editInput || connections}</text>
-          <text fg="#7aa2f7">█</text>
+          <text fg={colors.warning}>Connections:</text>
+          <text fg={colors.text}>{editInput || connections}</text>
+          <text fg={colors.primary}>█</text>
         </box>
-        <text fg="#565f89">[0-9] type [backspace] delete [enter] confirm [esc] cancel</text>
+        <text fg={colors.textMuted}>
+          {layout === "compact"
+            ? "[0-9] type [enter] confirm [esc] cancel"
+            : "[0-9] type  [backspace] delete  [enter] confirm  [esc] cancel"}
+        </text>
       </box>
     );
   }
@@ -661,9 +846,13 @@ function CommandBar({
   if (phase === "complete") {
     return (
       <box flexDirection="column" marginTop={1}>
-        <text fg="#565f89">{"─".repeat(60)}</text>
-        {exportMessage && <text fg="#9ece6a">{exportMessage}</text>}
-        <text fg="#7dcfff">[r] rerun [c] connections [e] export [1-4] view [q] quit</text>
+        {divider && <text fg={colors.textMuted}>{divider}</text>}
+        {exportMessage && <text fg={colors.success}>{exportMessage}</text>}
+        <text fg={colors.info}>
+          {layout === "compact"
+            ? "[r] rerun [e] export [q] quit"
+            : "[r] rerun  [c] connections  [e] export  [1-4] view  [q] quit"}
+        </text>
       </box>
     );
   }
@@ -676,21 +865,25 @@ function MetricContent({
   snapshot,
   history,
   result,
+  width,
+  layout,
 }: {
   view: MetricView;
   snapshot?: StatsSnapshot;
   history: MetricHistory;
   result?: BenchmarkResult;
+  width: number;
+  layout: LayoutMode;
 }) {
   switch (view) {
     case "rps":
-      return <RpsView snapshot={snapshot} history={history} result={result} />;
+      return <RpsView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
     case "latency":
-      return <LatencyView snapshot={snapshot} history={history} result={result} />;
+      return <LatencyView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
     case "throughput":
-      return <ThroughputView snapshot={snapshot} history={history} result={result} />;
+      return <ThroughputView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
     default:
-      return <OverviewView snapshot={snapshot} history={history} result={result} />;
+      return <OverviewView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
   }
 }
 
@@ -698,6 +891,8 @@ const VIEW_ORDER: MetricView[] = ["overview", "rps", "latency", "throughput"];
 
 export function BenchmarkTui() {
   const state = useTuiState();
+  const { width, height: _height } = useTerminalDimensions();
+  const layout = getLayoutMode(width);
 
   useKeyboard((key) => {
     if (state.phase === "running" || state.phase === "complete") {
@@ -762,24 +957,45 @@ export function BenchmarkTui() {
 
   return (
     <box flexDirection="column" padding={1}>
-      <Header url={state.url} method={state.method} connections={state.connections} />
+      <Header
+        url={state.url}
+        method={state.method}
+        connections={state.connections}
+        duration={state.duration}
+        layout={layout}
+      />
 
-      {state.phase === "warmup" && <text fg="#e0af68">Warming up...</text>}
+      {state.phase === "warmup" && (
+        <box border borderStyle="rounded" borderColor={colors.warning} padding={1} marginBottom={1}>
+          <text fg={colors.warning}>Warming up...</text>
+        </box>
+      )}
 
       {(state.phase === "running" ||
         state.phase === "complete" ||
         state.phase === "exporting" ||
         state.phase === "editing") && (
         <>
-          <TabBar currentView={state.view} phase={state.phase} />
+          <TabBar currentView={state.view} layout={layout} />
 
           {state.phase === "running" && state.snapshot && (
-            <RunningStatus progress={state.progress} elapsed={state.snapshot.elapsedMs} />
+            <RunningStatus
+              progress={state.progress}
+              elapsed={state.snapshot.elapsedMs}
+              snapshot={state.snapshot}
+              width={width}
+            />
           )}
 
           {state.phase === "complete" && (
-            <box marginBottom={1}>
-              <text fg="#9ece6a">✓ Benchmark complete</text>
+            <box
+              border
+              borderStyle="rounded"
+              borderColor={colors.success}
+              padding={1}
+              marginBottom={1}
+            >
+              <text fg={colors.success}>✓ Benchmark complete</text>
             </box>
           )}
 
@@ -788,6 +1004,8 @@ export function BenchmarkTui() {
             snapshot={state.snapshot}
             history={state.history}
             result={state.result}
+            width={width}
+            layout={layout}
           />
         </>
       )}
@@ -797,6 +1015,7 @@ export function BenchmarkTui() {
         exportMessage={state.exportMessage}
         editInput={state.editInput}
         connections={state.connections}
+        layout={layout}
       />
 
       {state.phase === "complete" && <UpgradeNotification status={state.upgradeStatus} />}
