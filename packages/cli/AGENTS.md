@@ -8,6 +8,10 @@ HTTP benchmarking CLI implementation. See root AGENTS.md for project overview.
 src/
 ├── cli.ts         # parseArgs(), buildConfig() - cleye flag definitions
 ├── index.ts       # main() entry, mode routing (TUI/CLI/export)
+├── version.ts     # VERSION constant - updated on release
+├── commands/      # Subcommands
+│   ├── upgrade.ts     # `burl upgrade` - interactive upgrade
+│   └── auto-upgrade.ts# Background update check, GitHub releases API
 ├── core/          # Benchmark execution
 │   ├── engine.ts      # BenchmarkEngine - worker pool orchestration
 │   ├── http-client.ts # makeRequest() - single request with timing
@@ -29,11 +33,13 @@ src/
 | ------------------------- | ----------------------------- | -------------------------- |
 | Add CLI flag              | `cli.ts`                      | `parseArgs()` flags object |
 | Transform flag to config  | `cli.ts`                      | `buildConfig()`            |
+| Add subcommand            | `index.ts` + `commands/`      | Check args[0] before parse |
 | Change worker behavior    | `core/engine.ts`              | `runWorker()`              |
 | Add error category        | `core/http-client.ts`         | `categorizeError()`        |
 | Add latency percentile    | `stats/collector.ts`          | `calculateLatencyStats()`  |
 | Add TUI keyboard shortcut | `output/tui/BenchmarkTui.tsx` | `useKeyboard()` handler    |
 | Add LLM recommendation    | `output/export/llm.ts`        | `analyzeResult()`          |
+| Modify auto-upgrade       | `commands/auto-upgrade.ts`    | `backgroundUpgrade()`      |
 
 ## DATA FLOW
 
