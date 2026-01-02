@@ -10,6 +10,7 @@ import {
   setUpgradeStatus,
 } from "./BenchmarkTui";
 import { backgroundUpgrade } from "../../commands/auto-upgrade";
+import { VERSION } from "../../version";
 
 let renderer: CliRenderer | null = null;
 let root: ReturnType<typeof createRoot> | null = null;
@@ -52,7 +53,9 @@ export async function initTui(
 
   root.render(<BenchmarkTui />);
 
-  backgroundUpgrade(setUpgradeStatus);
+  if (!VERSION.includes("dev")) {
+    backgroundUpgrade(setUpgradeStatus);
+  }
 }
 
 export function tuiSetWarmup(): void {
