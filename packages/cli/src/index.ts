@@ -44,6 +44,11 @@ async function main(): Promise<void> {
 
   const config = buildConfig(options);
 
+  if (options.diagnose) {
+    await runDiagnoseMode(config, options);
+    return;
+  }
+
   const isExportMode = Boolean(options.llm || options.output || options.format !== "text");
   const useTui = shouldUseTui(options.noTui || options.quiet || isExportMode, false);
   const useAnsiProgress = !useTui && process.stdout.isTTY && !options.quiet && !options.llm;
@@ -66,6 +71,8 @@ async function runTuiMode(
     tuiSetComplete,
     tuiSetExportMessage,
     tuiUpdateConnections,
+    tuiSetDiagnosing,
+    tuiSetDiagnosticResult,
     tuiDestroy,
   } = await import("./output/tui/index.tsx");
 
@@ -131,12 +138,26 @@ async function runTuiMode(
     runBenchmark();
   };
 
+  const handleDiagnose = async () => {
+    tuiSetDiagnosing();
+    try {
+      const { runDiagnostics } = await import("./core/diagnose");
+      const result = await runDiagnostics(currentConfig);
+      tuiSetDiagnosticResult(result);
+    } catch {
+      if (currentResult) {
+        tuiSetComplete(currentResult);
+      }
+    }
+  };
+
   await initTui(config.url, config.method, config.connections, config.durationMs, {
     onStop: () => engine.stop(),
     onRerun: () => runBenchmark(),
     onExport: handleExport,
     onQuit: handleQuit,
     onUpdateConnections: handleUpdateConnections,
+    onDiagnose: handleDiagnose,
   });
 
   await runBenchmark();
@@ -149,6 +170,28 @@ async function runTuiMode(
       }
     }, 100);
   });
+}
+
+async function runDiagnoseMode(
+  config: BenchmarkConfig,
+  options: ReturnType<typeof parseArgs>,
+): Promise<void> {
+  const { runDiagnostics } = await import("./core/diagnose");
+  const { renderDiagnostics } = await import("./output/ansi/diagnose");
+
+  if (!options.quiet) {
+    console.log("\nRunning connection diagnostics...\n");
+  }
+
+  try {
+    const result = await runDiagnostics(config);
+    const output = renderDiagnostics(result, config.url, config.method);
+    console.log(output);
+    process.exit(0);
+  } catch (err) {
+    console.error("Diagnostic error:", err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
 }
 
 async function runCliMode(
@@ -257,6 +300,7 @@ TUI Controls:
 Other:
   -k, --insecure           Skip TLS verification
   --latency-correction     Enable latency correction
+  -D, --diagnose           Run connection diagnostics (timing breakdown)
   --version, -V            Show version
   --help, -h               Show this help
 

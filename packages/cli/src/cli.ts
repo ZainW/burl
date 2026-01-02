@@ -141,6 +141,12 @@ export function parseArgs(args: string[]): CliOptions {
           default: false,
           description: "Enable latency correction",
         },
+        diagnose: {
+          type: Boolean,
+          alias: "D",
+          default: false,
+          description: "Run connection diagnostics (timing breakdown)",
+        },
       },
     },
     undefined,
@@ -173,6 +179,7 @@ export function parseArgs(args: string[]): CliOptions {
     quiet: argv.flags.quiet,
     insecure: argv.flags.insecure,
     latencyCorrection: argv.flags.latencyCorrection,
+    diagnose: argv.flags.diagnose,
   };
 }
 

@@ -21,6 +21,7 @@ interface TuiCallbacks {
   onExport?: (format: "json" | "csv" | "markdown") => void;
   onQuit?: () => void;
   onUpdateConnections?: (connections: number) => void;
+  onDiagnose?: () => void;
 }
 
 export async function initTui(
@@ -82,6 +83,16 @@ export function tuiSetExportMessage(message: string): void {
 
 export function tuiUpdateConnections(connections: number): void {
   updateTuiState({ connections, editInput: "" });
+}
+
+export function tuiSetDiagnosing(): void {
+  updateTuiState({ phase: "diagnosing" });
+}
+
+export function tuiSetDiagnosticResult(
+  result: Parameters<typeof updateTuiState>[0]["diagnosticResult"],
+): void {
+  updateTuiState({ phase: "diagnosing", diagnosticResult: result });
 }
 
 export function tuiDestroy(): void {

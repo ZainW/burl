@@ -1,4 +1,5 @@
 import type { BenchmarkResult, StatsSnapshot } from "../../stats/types";
+import type { DiagnosticResult } from "../../core/diagnose";
 import { formatLatency, formatDuration } from "../../utils/time";
 import { formatBytes, formatThroughput } from "../../utils/bytes";
 import { VERSION } from "../../version";
@@ -6,7 +7,7 @@ import { useState, useEffect } from "react";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { theme } from "./theme";
 
-type Phase = "idle" | "warmup" | "running" | "complete" | "exporting" | "editing";
+type Phase = "idle" | "warmup" | "running" | "complete" | "exporting" | "editing" | "diagnosing";
 type MetricView = "overview" | "rps" | "latency" | "throughput";
 type LayoutMode = "compact" | "normal" | "wide";
 type UpgradeStatus =
@@ -56,9 +57,11 @@ interface TuiState {
   onExport?: (format: "json" | "csv" | "markdown") => void;
   onQuit?: () => void;
   onUpdateConnections?: (connections: number) => void;
+  onDiagnose?: () => void;
   exportMessage?: string;
   editInput: string;
   upgradeStatus: UpgradeStatus;
+  diagnosticResult?: DiagnosticResult;
 }
 
 const emptyHistory: MetricHistory = {
@@ -867,14 +870,173 @@ function CommandBar({
         {exportMessage && <text fg={colors.success}>{exportMessage}</text>}
         <text fg={colors.info}>
           {layout === "compact"
-            ? "[r] rerun [e] export [q] quit"
-            : "[r] rerun  [c] connections  [e] export  [1-4] view  [q] quit"}
+            ? "[r] rerun [d] diagnose [e] export [q] quit"
+            : "[r] rerun  [d] diagnose  [c] connections  [e] export  [1-4] view  [q] quit"}
         </text>
       </box>
     );
   }
 
+  if (phase === "diagnosing") {
+    return (
+      <box marginTop={1}>
+        <text fg={colors.textMuted}>Running connection diagnostics...</text>
+      </box>
+    );
+  }
+
   return null;
+}
+
+function DiagnosticsTimingBar({
+  label,
+  value,
+  maxValue,
+  skipLabel,
+  barColor = colors.primary,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  skipLabel?: string;
+  barColor?: string;
+}) {
+  const barWidth = 25;
+
+  if (skipLabel && value === 0) {
+    return (
+      <box flexDirection="row">
+        <text fg={colors.textMuted}>{label.padEnd(14)}</text>
+        <text fg={colors.textMuted}>{`(${skipLabel})`.padEnd(barWidth + 2)}</text>
+        <text fg={colors.textMuted}>{"0.00ms".padStart(10)}</text>
+      </box>
+    );
+  }
+
+  const filled = maxValue > 0 ? Math.max(1, Math.round((value / maxValue) * barWidth)) : 0;
+  const empty = barWidth - filled;
+  const bar = "█".repeat(filled) + "░".repeat(empty);
+
+  return (
+    <box flexDirection="row">
+      <text fg={colors.textMuted}>{label.padEnd(14)}</text>
+      <text fg={barColor}>{bar}</text>
+      <text fg={colors.text}>{` ${formatLatency(value).padStart(10)}`}</text>
+    </box>
+  );
+}
+
+function DiagnosticsView({
+  diagnosticResult,
+  url,
+  method,
+}: {
+  diagnosticResult: DiagnosticResult;
+  url: string;
+  method: string;
+}) {
+  const maxTime = Math.max(
+    diagnosticResult.cold.dnsLookupMs,
+    diagnosticResult.cold.tcpTlsConnectMs,
+    diagnosticResult.cold.ttfbMs,
+    diagnosticResult.cold.contentTransferMs,
+    diagnosticResult.warm.ttfbMs,
+    diagnosticResult.warm.contentTransferMs,
+  );
+
+  return (
+    <box flexDirection="column" gap={1}>
+      <box border borderStyle="rounded" borderColor={colors.primary} padding={1}>
+        <box flexDirection="column">
+          <text fg={colors.secondary}>Cold Connection (first request)</text>
+          <box flexDirection="column" marginTop={1}>
+            <DiagnosticsTimingBar
+              label="DNS Lookup"
+              value={diagnosticResult.cold.dnsLookupMs}
+              maxValue={maxTime}
+              barColor={colors.info}
+            />
+            <DiagnosticsTimingBar
+              label="TCP + TLS"
+              value={diagnosticResult.cold.tcpTlsConnectMs}
+              maxValue={maxTime}
+              barColor={colors.warning}
+            />
+            <DiagnosticsTimingBar
+              label="TTFB"
+              value={diagnosticResult.cold.ttfbMs}
+              maxValue={maxTime}
+              barColor={colors.success}
+            />
+            <DiagnosticsTimingBar
+              label="Transfer"
+              value={diagnosticResult.cold.contentTransferMs}
+              maxValue={maxTime}
+              barColor={colors.primary}
+            />
+            <box flexDirection="row" marginTop={1}>
+              <text fg={colors.text}>{"Total".padEnd(14)}</text>
+              <text fg={colors.text}>{formatLatency(diagnosticResult.cold.totalMs)}</text>
+            </box>
+          </box>
+        </box>
+      </box>
+
+      <box border borderStyle="rounded" borderColor={colors.success} padding={1}>
+        <box flexDirection="column">
+          <text fg={colors.secondary}>Warm Connection (reused)</text>
+          <box flexDirection="column" marginTop={1}>
+            <DiagnosticsTimingBar
+              label="DNS Lookup"
+              value={diagnosticResult.warm.dnsLookupMs}
+              maxValue={maxTime}
+              skipLabel="cached"
+            />
+            <DiagnosticsTimingBar
+              label="TCP + TLS"
+              value={diagnosticResult.warm.tcpTlsConnectMs}
+              maxValue={maxTime}
+              skipLabel="keep-alive"
+              barColor={colors.warning}
+            />
+            <DiagnosticsTimingBar
+              label="TTFB"
+              value={diagnosticResult.warm.ttfbMs}
+              maxValue={maxTime}
+              barColor={colors.success}
+            />
+            <DiagnosticsTimingBar
+              label="Transfer"
+              value={diagnosticResult.warm.contentTransferMs}
+              maxValue={maxTime}
+              barColor={colors.primary}
+            />
+            <box flexDirection="row" marginTop={1}>
+              <text fg={colors.text}>{"Total".padEnd(14)}</text>
+              <text fg={colors.text}>{formatLatency(diagnosticResult.warm.totalMs)}</text>
+            </box>
+          </box>
+        </box>
+      </box>
+
+      <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
+        <box flexDirection="column">
+          <text fg={colors.secondary}>Connection Details</text>
+          <box flexDirection="column" marginTop={1}>
+            <StatRow label="Target" value={`${method} ${url}`} />
+            <StatRow label="Remote" value={diagnosticResult.details.remoteAddress} />
+            <StatRow label="Protocol" value={diagnosticResult.details.protocol} />
+            {diagnosticResult.details.tlsVersion && (
+              <StatRow label="TLS" value={diagnosticResult.details.tlsVersion} />
+            )}
+            {diagnosticResult.details.serverHeader && (
+              <StatRow label="Server" value={diagnosticResult.details.serverHeader} />
+            )}
+          </box>
+        </box>
+      </box>
+    </box>
+  );
 }
 
 function MetricContent({
@@ -994,6 +1156,8 @@ export function BenchmarkTui() {
     } else if (state.phase === "complete") {
       if (key.name === "r" && state.onRerun) {
         state.onRerun();
+      } else if (key.name === "d" && state.onDiagnose) {
+        state.onDiagnose();
       } else if (key.name === "c") {
         updateTuiState({ phase: "editing", editInput: "" });
       } else if (key.name === "e") {
@@ -1001,6 +1165,8 @@ export function BenchmarkTui() {
       } else if (key.name === "q" && state.onQuit) {
         state.onQuit();
       }
+    } else if (state.phase === "diagnosing" && key.name === "escape") {
+      updateTuiState({ phase: "complete" });
     }
   });
 
@@ -1066,6 +1232,14 @@ export function BenchmarkTui() {
         connections={state.connections}
         layout={layout}
       />
+
+      {state.phase === "diagnosing" && state.diagnosticResult && (
+        <DiagnosticsView
+          diagnosticResult={state.diagnosticResult}
+          url={state.url}
+          method={state.method}
+        />
+      )}
 
       {state.phase === "complete" && <UpgradeNotification status={state.upgradeStatus} />}
     </box>

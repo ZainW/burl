@@ -53,4 +53,5 @@ export interface CliOptions {
 
   insecure: boolean;
   latencyCorrection: boolean;
+  diagnose: boolean;
 }
