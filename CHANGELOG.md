@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.5
+
+[compare changes](https://github.com/ZainW/burl/compare/v0.0.4...v0.0.5)
+
+### 🩹 Fixes
+
+- **ci:** Add checkout step to checksums job for gh CLI context ([832c2db](https://github.com/ZainW/burl/commit/832c2db))
+- Skip auto-updater in dev mode ([9e83b0f](https://github.com/ZainW/burl/commit/9e83b0f))
+
+### ❤️ Contributors
+
+- Zain W ([@ZainW](https://github.com/ZainW))
+
 ## v0.0.4
 
 [compare changes](https://github.com/ZainW/burl/compare/v0.0.3...v0.0.4)
