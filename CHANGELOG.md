@@ -1,8 +1,6 @@
 # Changelog
 
-
 ## v0.0.1
-
 
 ### 🚀 Enhancements
 
@@ -35,4 +33,3 @@
 ### ❤️ Contributors
 
 - Zain Wania ([@ZainW](https://github.com/ZainW))
-

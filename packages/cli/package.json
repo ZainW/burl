@@ -41,8 +41,8 @@
     "lint:fix": "oxlint -c .oxlintrc.json --tsconfig tsconfig.json --fix"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.66",
-    "@opentui/react": "^0.1.66",
+    "@opentui/core": "^0.1.67",
+    "@opentui/react": "^0.1.67",
     "cleye": "^2.2.1",
     "hdr-histogram-js": "^3.0.1",
     "react": "^19.2.3"
@@ -50,7 +50,7 @@
   "devDependencies": {
     "@types/bun": "^1.3.5",
     "@types/react": "^19.2.7",
-    "@typescript/native-preview": "^7.0.0-dev.20251229.1",
+    "@typescript/native-preview": "^7.0.0-dev.20260101.1",
     "oxlint": "^1.36.0"
   }
 }
