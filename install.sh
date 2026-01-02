@@ -94,12 +94,12 @@ check_path() {
       echo "  source ~/.zshrc"
       ;;
     */bash)
-      if [ -f "$HOME/.bash_profile" ]; then
-        echo "  echo 'export PATH=\"\$PATH:${INSTALL_DIR}\"' >> ~/.bash_profile"
-        echo "  source ~/.bash_profile"
-      else
+      if [ -f "$HOME/.bashrc" ]; then
         echo "  echo 'export PATH=\"\$PATH:${INSTALL_DIR}\"' >> ~/.bashrc"
         echo "  source ~/.bashrc"
+      else
+        echo "  echo 'export PATH=\"\$PATH:${INSTALL_DIR}\"' >> ~/.bash_profile"
+        echo "  source ~/.bash_profile"
       fi
       ;;
     */fish)
