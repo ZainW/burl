@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.3
+
+[compare changes](https://github.com/ZainW/burl/compare/v0.0.2...v0.0.3)
+
+### 📦 Build
+
+- Remove darwin-x64 target (Intel Mac deprecated) ([0e991c3](https://github.com/ZainW/burl/commit/0e991c3))
+
+### ❤️ Contributors
+
+- Zain W ([@ZainW](https://github.com/ZainW))
+
 ## v0.0.2
 
 [compare changes](https://github.com/ZainW/burl/compare/v0.2.0...v0.0.2)
