@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.0.4
+
+[compare changes](https://github.com/ZainW/burl/compare/v0.0.3...v0.0.4)
+
+### 🚀 Enhancements
+
+- **tui:** Redesign with responsive layout and terminal-aware theming ([12af796](https://github.com/ZainW/burl/commit/12af796))
+- **docs:** Add /api/health endpoint for observability and benchmarking ([66b1fe2](https://github.com/ZainW/burl/commit/66b1fe2))
+
+### 🩹 Fixes
+
+- **install:** Prioritize .bashrc over .bash_profile for PATH setup ([05c04b1](https://github.com/ZainW/burl/commit/05c04b1))
+
+### 🎨 Styles
+
+- Format ([c01e4f4](https://github.com/ZainW/burl/commit/c01e4f4))
+
+### ❤️ Contributors
+
+- Zain W ([@ZainW](https://github.com/ZainW))
+
 ## v0.0.3
 
 [compare changes](https://github.com/ZainW/burl/compare/v0.0.2...v0.0.3)
