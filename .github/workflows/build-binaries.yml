@@ -27,9 +27,6 @@ jobs:
           - target: bun-linux-arm64
             artifact: burl-linux-arm64
             os: ubuntu-24.04-arm
-          - target: bun-darwin-x64
-            artifact: burl-darwin-x64
-            os: macos-15
           - target: bun-darwin-arm64
             artifact: burl-darwin-arm64
             os: macos-latest
