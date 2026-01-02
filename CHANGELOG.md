@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.0.2
+
+[compare changes](https://github.com/ZainW/burl/compare/v0.2.0...v0.0.2)
+
+### 🩹 Fixes
+
+- Use macos-15 for darwin-x64 builds (macos-13 retired) ([3a952c9](https://github.com/ZainW/burl/commit/3a952c9))
+
+### 📖 Documentation
+
+- Update AGENTS.md with current metadata and commands structure ([5157cb4](https://github.com/ZainW/burl/commit/5157cb4))
+
+### ❤️ Contributors
+
+- Zain Wania ([@ZainW](https://github.com/ZainW))
+
 ## v0.0.1
 
 ### 🚀 Enhancements
