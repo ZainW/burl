@@ -74,6 +74,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
