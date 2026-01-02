@@ -275,13 +275,7 @@ function Header({
   );
 }
 
-function TabBar({
-  currentView,
-  layout,
-}: {
-  currentView: MetricView;
-  layout: LayoutMode;
-}) {
+function TabBar({ currentView, layout }: { currentView: MetricView; layout: LayoutMode }) {
   const tabs: { key: string; view: MetricView; label: string; short: string }[] = [
     { key: "1", view: "overview", label: "Overview", short: "Ovw" },
     { key: "2", view: "rps", label: "RPS", short: "RPS" },
@@ -363,7 +357,10 @@ function OverviewView({
     {
       label: "Failed",
       value: (result?.failedRequests ?? snapshot?.failedRequests ?? 0).toLocaleString(),
-      color: (result?.failedRequests ?? snapshot?.failedRequests ?? 0) > 0 ? colors.error : colors.textMuted,
+      color:
+        (result?.failedRequests ?? snapshot?.failedRequests ?? 0) > 0
+          ? colors.error
+          : colors.textMuted,
     },
     {
       label: "RPS",
@@ -409,7 +406,12 @@ function OverviewView({
             borderColor={colors.borderMuted}
             padding={1}
           >
-            <Sparkline values={history.rps} label="RPS Trend" color={colors.success} width={chartWidth} />
+            <Sparkline
+              values={history.rps}
+              label="RPS Trend"
+              color={colors.success}
+              width={chartWidth}
+            />
           </box>
           {layout === "wide" && (
             <box
@@ -489,7 +491,12 @@ function RpsView({
       </box>
 
       <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
-        <Sparkline values={history.rps} label="RPS Over Time" color={colors.success} width={chartWidth} />
+        <Sparkline
+          values={history.rps}
+          label="RPS Over Time"
+          color={colors.success}
+          width={chartWidth}
+        />
       </box>
 
       {history.successRate.length > 0 && (
@@ -533,17 +540,32 @@ function LatencyView({
       >
         <box flexDirection="column" flexGrow={1}>
           <text fg={colors.secondary}>Percentiles</text>
-          <box flexDirection={layout === "compact" ? "column" : "row"} gap={layout === "compact" ? 0 : 3} marginTop={1}>
+          <box
+            flexDirection={layout === "compact" ? "column" : "row"}
+            gap={layout === "compact" ? 0 : 3}
+            marginTop={1}
+          >
             <box flexDirection="column">
               <StatRow label="Min" value={formatLatency(result?.latency.min ?? 0)} />
-              <StatRow label="P50" value={formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0)} />
+              <StatRow
+                label="P50"
+                value={formatLatency(result?.latency.p50 ?? snapshot?.latencyP50 ?? 0)}
+              />
               <StatRow label="P75" value={formatLatency(result?.latency.p75 ?? 0)} />
               <StatRow label="P90" value={formatLatency(result?.latency.p90 ?? 0)} />
             </box>
             <box flexDirection="column">
               <StatRow label="P95" value={formatLatency(result?.latency.p95 ?? 0)} />
-              <StatRow label="P99" value={formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0)} color={colors.warning} />
-              <StatRow label="Max" value={formatLatency(result?.latency.max ?? 0)} color={colors.error} />
+              <StatRow
+                label="P99"
+                value={formatLatency(result?.latency.p99 ?? snapshot?.latencyP99 ?? 0)}
+                color={colors.warning}
+              />
+              <StatRow
+                label="Max"
+                value={formatLatency(result?.latency.max ?? 0)}
+                color={colors.error}
+              />
             </box>
           </box>
         </box>
@@ -631,13 +653,7 @@ function ThroughputView({
   );
 }
 
-function LatencyHistogram({
-  result,
-  width,
-}: {
-  result: BenchmarkResult;
-  width: number;
-}) {
+function LatencyHistogram({ result, width }: { result: BenchmarkResult; width: number }) {
   const buckets = [
     { label: "P50", value: result.latency.p50, color: colors.success },
     { label: "P75", value: result.latency.p75, color: colors.primary },
@@ -690,7 +706,8 @@ function StatusCodes({
         <box flexDirection="row" gap={2} marginTop={1} flexWrap="wrap">
           {entries.map(([code, count]) => {
             const codeNum = Number(code);
-            const color = codeNum < 300 ? colors.success : codeNum < 400 ? colors.warning : colors.error;
+            const color =
+              codeNum < 300 ? colors.success : codeNum < 400 ? colors.warning : colors.error;
             const pct = ((count / total) * 100).toFixed(0);
             return (
               <text key={code}>
@@ -820,7 +837,7 @@ function CommandBar({
   if (phase === "exporting") {
     return (
       <box marginTop={1}>
-        <text fg={colors.warning}>[j] JSON  [c] CSV  [m] Markdown  [esc] cancel</text>
+        <text fg={colors.warning}>[j] JSON [c] CSV [m] Markdown [esc] cancel</text>
       </box>
     );
   }
@@ -877,13 +894,45 @@ function MetricContent({
 }) {
   switch (view) {
     case "rps":
-      return <RpsView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
+      return (
+        <RpsView
+          snapshot={snapshot}
+          history={history}
+          result={result}
+          width={width}
+          layout={layout}
+        />
+      );
     case "latency":
-      return <LatencyView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
+      return (
+        <LatencyView
+          snapshot={snapshot}
+          history={history}
+          result={result}
+          width={width}
+          layout={layout}
+        />
+      );
     case "throughput":
-      return <ThroughputView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
+      return (
+        <ThroughputView
+          snapshot={snapshot}
+          history={history}
+          result={result}
+          width={width}
+          layout={layout}
+        />
+      );
     default:
-      return <OverviewView snapshot={snapshot} history={history} result={result} width={width} layout={layout} />;
+      return (
+        <OverviewView
+          snapshot={snapshot}
+          history={history}
+          result={result}
+          width={width}
+          layout={layout}
+        />
+      );
   }
 }
 
