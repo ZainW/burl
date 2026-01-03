@@ -1,0 +1,48 @@
+{
+  "$schema": "https://burl.dev/schema/config.json",
+  "connections": 10,
+  "duration": "30s",
+  "timeout": "10s",
+  "http2": true,
+  "format": "text",
+  "noColor": false,
+  "insecure": false,
+
+  "profiles": {
+    "quick": {
+      "connections": 5,
+      "duration": "5s",
+      "warmup": 0
+    },
+    "load-test": {
+      "connections": 100,
+      "duration": "60s",
+      "warmup": 10,
+      "qps": 1000
+    },
+    "staging": {
+      "connections": 20,
+      "duration": "30s",
+      "insecure": true,
+      "headers": {
+        "X-Environment": "staging",
+        "X-API-Key": "${STAGING_API_KEY}"
+      }
+    },
+    "ci": {
+      "connections": 10,
+      "duration": "10s",
+      "format": "json",
+      "output": "benchmark-results.json",
+      "noTui": true,
+      "quiet": true
+    },
+    "graphql": {
+      "method": "POST",
+      "contentType": "application/json",
+      "headers": {
+        "Accept": "application/json"
+      }
+    }
+  }
+}

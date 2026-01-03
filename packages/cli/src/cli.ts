@@ -2,11 +2,15 @@ import { cli } from "cleye";
 import type { CliOptions, BenchmarkConfig } from "./core/types";
 import { parseDuration } from "./utils/time";
 import { parseAuth } from "./core/auth";
+import { loadConfigFile, mergeConfig } from "./core/config";
 import { VERSION } from "./version";
 
 const name = "burl";
 
 export function parseArgs(args: string[]): CliOptions {
+  // Load config file if exists
+  const configFile = loadConfigFile();
+
   const argv = cli(
     {
       name,
@@ -153,7 +157,7 @@ export function parseArgs(args: string[]): CliOptions {
     args,
   );
 
-  return {
+  const cliOptions: CliOptions = {
     url: argv._.url,
     method: argv.flags.method.toUpperCase(),
     headers: argv.flags.header,
@@ -181,6 +185,11 @@ export function parseArgs(args: string[]): CliOptions {
     latencyCorrection: argv.flags.latencyCorrection,
     diagnose: argv.flags.diagnose,
   };
+
+  // Merge with config file (CLI options take precedence)
+  const merged = mergeConfig(cliOptions, configFile);
+
+  return merged as CliOptions;
 }
 
 export function buildConfig(options: CliOptions): BenchmarkConfig {
