@@ -309,6 +309,28 @@ function StatRow({ label, value, color }: { label: string; value: string; color?
   );
 }
 
+function BigNumber({
+  label,
+  value,
+  unit = "",
+  color = colors.primary,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  color?: string;
+}) {
+  return (
+    <box flexDirection="column" alignItems="center" paddingLeft={1} paddingRight={1}>
+      <text>
+        <span fg={color}>{value}</span>
+        {unit && <span fg={colors.textMuted}>{unit}</span>}
+      </text>
+      <text fg={colors.textMuted}>{label}</text>
+    </box>
+  );
+}
+
 function MetricsPanel({
   title,
   rows,
@@ -385,8 +407,37 @@ function OverviewView({
     { label: "Duration", value: formatDuration(result?.durationMs ?? snapshot?.elapsedMs ?? 0) },
   ];
 
+  const currentRps = result?.requestsPerSecond ?? snapshot?.currentRps ?? 0;
+  const p99Latency = result?.latency.p99 ?? snapshot?.latencyP99 ?? 0;
+  const successCount = result?.successfulRequests ?? snapshot?.successfulRequests ?? 0;
+  const failedCount = result?.failedRequests ?? snapshot?.failedRequests ?? 0;
+
   return (
     <box flexDirection="column" gap={1}>
+      <box
+        flexDirection="row"
+        justifyContent="space-around"
+        border
+        borderStyle="rounded"
+        borderColor={colors.primary}
+        padding={1}
+      >
+        <BigNumber label="RPS" value={currentRps.toFixed(0)} color={colors.success} />
+        <BigNumber
+          label="P99 Latency"
+          value={formatLatency(p99Latency)}
+          color={p99Latency > 100 ? colors.warning : colors.primary}
+        />
+        <BigNumber
+          label="Success"
+          value={successCount.toLocaleString()}
+          color={colors.success}
+        />
+        {failedCount > 0 && (
+          <BigNumber label="Failed" value={failedCount.toLocaleString()} color={colors.error} />
+        )}
+      </box>
+
       <box
         flexDirection="row"
         gap={2}
@@ -436,7 +487,7 @@ function OverviewView({
       )}
 
       {isComplete && result && (
-        <StatusCodes statusCodes={result.statusCodes} total={result.totalRequests} />
+        <StatusCodes statusCodes={result.statusCodes} total={result.totalRequests} width={width} />
       )}
 
       {isComplete && result && result.failedRequests > 0 && result.errors && (
@@ -695,32 +746,48 @@ function LatencyHistogram({ result, width }: { result: BenchmarkResult; width: n
 function StatusCodes({
   statusCodes,
   total,
+  width,
 }: {
   statusCodes: Record<number, number>;
   total: number;
+  width: number;
 }) {
   const entries = Object.entries(statusCodes).sort(([a], [b]) => Number(a) - Number(b));
-  if (entries.length === 0) return null;
+  if (entries.length === 0 || total === 0) return null;
+
+  const barWidth = Math.max(20, Math.min(60, width - 10));
+
+  const segments = entries.map(([code, count]) => {
+    const codeNum = Number(code);
+    const color = codeNum < 300 ? colors.success : codeNum < 400 ? colors.warning : colors.error;
+    const ratio = count / total;
+    const segmentWidth = Math.max(0, Math.round(ratio * barWidth));
+    return { code, count, color, segmentWidth, ratio };
+  });
 
   return (
     <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
       <box flexDirection="column">
         <text fg={colors.secondary}>Status Codes</text>
+        <box flexDirection="row" marginTop={1}>
+          <text>[</text>
+          {segments.map((seg) => (
+            <text key={seg.code} fg={seg.color}>
+              {"█".repeat(seg.segmentWidth)}
+            </text>
+          ))}
+          <text>]</text>
+        </box>
         <box flexDirection="row" gap={2} marginTop={1} flexWrap="wrap">
-          {entries.map(([code, count]) => {
-            const codeNum = Number(code);
-            const color =
-              codeNum < 300 ? colors.success : codeNum < 400 ? colors.warning : colors.error;
-            const pct = ((count / total) * 100).toFixed(0);
-            return (
-              <text key={code}>
-                <span fg={color}>{code}</span>
-                <span fg={colors.textMuted}>
-                  : {count.toLocaleString()} ({pct}%)
-                </span>
-              </text>
-            );
-          })}
+          {segments.map((seg) => (
+            <text key={seg.code}>
+              <span fg={seg.color}>●</span>
+              <span fg={colors.text}> {seg.code}</span>
+              <span fg={colors.textMuted}>
+                : {seg.count.toLocaleString()} ({(seg.ratio * 100).toFixed(0)}%)
+              </span>
+            </text>
+          ))}
         </box>
       </box>
     </box>
