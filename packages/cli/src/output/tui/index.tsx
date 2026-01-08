@@ -1,5 +1,5 @@
 import { createCliRenderer, type CliRenderer } from "@opentui/core";
-import { createRoot } from "@opentui/react";
+import { render } from "@opentui/solid";
 import type { BenchmarkResult, StatsSnapshot } from "../../stats/types";
 import {
   BenchmarkTui,
@@ -13,7 +13,6 @@ import { backgroundUpgrade } from "../../commands/auto-upgrade";
 import { VERSION } from "../../version";
 
 let renderer: CliRenderer | null = null;
-let root: ReturnType<typeof createRoot> | null = null;
 
 interface TuiCallbacks {
   onStop?: () => void;
@@ -35,8 +34,6 @@ export async function initTui(
     exitOnCtrlC: false,
   });
 
-  root = createRoot(renderer);
-
   updateTuiState({
     phase: "idle",
     view: "overview",
@@ -52,7 +49,7 @@ export async function initTui(
     ...callbacks,
   });
 
-  root.render(<BenchmarkTui />);
+  await render(() => <BenchmarkTui />, renderer);
 
   if (!VERSION.includes("dev")) {
     backgroundUpgrade(setUpgradeStatus);
@@ -99,7 +96,6 @@ export function tuiDestroy(): void {
   if (renderer) {
     renderer.destroy();
     renderer = null;
-    root = null;
   }
 }
 

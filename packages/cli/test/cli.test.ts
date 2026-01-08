@@ -92,14 +92,12 @@ describe("parseArgs", () => {
       "-v",
       "--quiet",
       "-k",
-      "--latency-correction",
     ]);
     expect(options.noTui).toBe(true);
     expect(options.noColor).toBe(true);
     expect(options.verbose).toBe(true);
     expect(options.quiet).toBe(true);
     expect(options.insecure).toBe(true);
-    expect(options.latencyCorrection).toBe(true);
   });
 
   test("uses default values", () => {
@@ -191,11 +189,10 @@ describe("buildConfig", () => {
     expect(config.warmupRequests).toBe(20);
   });
 
-  test("configures insecure and latency correction", () => {
-    const options = parseArgs(["https://example.com", "-k", "--latency-correction"]);
+  test("configures insecure", () => {
+    const options = parseArgs(["https://example.com", "-k"]);
     const config = buildConfig(options);
 
     expect(config.insecure).toBe(true);
-    expect(config.latencyCorrection).toBe(true);
   });
 });

@@ -299,7 +299,6 @@ TUI Controls:
 
 Other:
   -k, --insecure           Skip TLS verification
-  --latency-correction     Enable latency correction
   -D, --diagnose           Run connection diagnostics (timing breakdown)
   --version, -V            Show version
   --help, -h               Show this help

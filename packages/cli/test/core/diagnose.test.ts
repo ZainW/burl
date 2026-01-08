@@ -80,16 +80,16 @@ describe("diagnose", () => {
     it("should handle missing optional fields", () => {
       const mockResult: DiagnosticResult = {
         cold: {
-          dnsLookupMs: 1.0,
-          tcpTlsConnectMs: 10.0,
-          ttfbMs: 5.0,
-          contentTransferMs: 2.0,
-          totalMs: 18.0,
+          dnsLookupMs: 1,
+          tcpTlsConnectMs: 10,
+          ttfbMs: 5,
+          contentTransferMs: 2,
+          totalMs: 18,
         },
         warm: {
           dnsLookupMs: 0,
           tcpTlsConnectMs: 0,
-          ttfbMs: 4.0,
+          ttfbMs: 4,
           contentTransferMs: 1.5,
           totalMs: 5.5,
         },

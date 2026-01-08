@@ -53,11 +53,10 @@ jobs:
           TAG="${{ inputs.tag || github.ref_name }}"
           VERSION=${TAG#v}
           echo "Building version $VERSION for ${{ matrix.target }}"
-          bun build --compile --minify --sourcemap \
-            --target=${{ matrix.target }} \
-            --define "BURL_VERSION='\"$VERSION\"'" \
-            ./src/index.ts \
-            --outfile dist/${{ matrix.artifact }}
+          bun run build.ts \
+            --target ${{ matrix.target }} \
+            --outfile dist/${{ matrix.artifact }} \
+            --version "$VERSION"
 
       - name: Upload to release
         shell: bash

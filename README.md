@@ -107,7 +107,6 @@ Output Options:
 
 Other:
   -k, --insecure           Skip TLS verification
-  --latency-correction     Enable latency correction
   --version, -V            Show version
   --help, -h               Show help
 ```

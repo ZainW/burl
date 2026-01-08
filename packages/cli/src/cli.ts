@@ -136,11 +136,6 @@ export function parseArgs(args: string[]): CliOptions {
           default: false,
           description: "Skip TLS verification",
         },
-        latencyCorrection: {
-          type: Boolean,
-          default: false,
-          description: "Enable latency correction",
-        },
         diagnose: {
           type: Boolean,
           alias: "D",
@@ -178,7 +173,6 @@ export function parseArgs(args: string[]): CliOptions {
     verbose: argv.flags.verbose,
     quiet: argv.flags.quiet,
     insecure: argv.flags.insecure,
-    latencyCorrection: argv.flags.latencyCorrection,
     diagnose: argv.flags.diagnose,
   };
 }
@@ -222,7 +216,6 @@ export function buildConfig(options: CliOptions): BenchmarkConfig {
     warmupRequests: options.warmup,
     httpVersion,
     insecure: options.insecure,
-    latencyCorrection: options.latencyCorrection,
   };
 
   if (options.requests) {

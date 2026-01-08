@@ -15,7 +15,6 @@ export interface BenchmarkConfig {
   auth?: AuthConfig;
 
   insecure: boolean;
-  latencyCorrection: boolean;
 }
 
 export type AuthConfig =
@@ -52,6 +51,5 @@ export interface CliOptions {
   quiet: boolean;
 
   insecure: boolean;
-  latencyCorrection: boolean;
   diagnose: boolean;
 }
