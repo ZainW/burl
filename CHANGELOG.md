@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.0.6
+
+[compare changes](https://github.com/ZainW/burl/compare/v0.0.5...v0.0.6)
+
+### 🚀 Enhancements
+
+- Add diagnostic mode with connection timing breakdown ([1691120](https://github.com/ZainW/burl/commit/1691120))
+- **tui:** Add hero metrics and visual status code bar ([4ab0381](https://github.com/ZainW/burl/commit/4ab0381))
+
+### 💅 Refactors
+
+- Migrate TUI from React to SolidJS with @opentui/solid ([728a8a7](https://github.com/ZainW/burl/commit/728a8a7))
+
+### ❤️ Contributors
+
+- Zain Wania ([@ZainW](https://github.com/ZainW))
+- Zain W ([@ZainW](https://github.com/ZainW))
+
 ## v0.0.5
 
 [compare changes](https://github.com/ZainW/burl/compare/v0.0.4...v0.0.5)
