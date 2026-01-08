@@ -89,6 +89,8 @@ export class StatsCollector {
     const bytesPerSecond = elapsed > 0 ? (this.totalBytes / elapsed) * 1000 : 0;
 
     const sorted = [...this.recentLatencies].sort((a, b) => a - b);
+    const mean =
+      sorted.length > 0 ? sorted.reduce((a, b) => a + b, 0) / sorted.length : 0;
 
     return {
       totalRequests: this.totalRequests,
@@ -96,6 +98,10 @@ export class StatsCollector {
       failedRequests: this.failedRequests,
       currentRps: rps,
       bytesPerSecond,
+      totalBytes: this.totalBytes,
+      latencyMin: sorted[0] ?? 0,
+      latencyMax: sorted[sorted.length - 1] ?? 0,
+      latencyMean: mean,
       latencyP50: this.percentile(sorted, 50),
       latencyP99: this.percentile(sorted, 99),
       elapsedMs: elapsed,

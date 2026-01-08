@@ -218,7 +218,7 @@ function formatValue(value: number, label?: string): string {
   return value.toFixed(1);
 }
 
-function ProgressBar(props: { progress: number; width: number }) {
+function ProgressBar(props: { progress: number; width: number; color?: string }) {
   const barWidth = () => Math.max(20, props.width - 10);
   const filled = () => Math.round(props.progress * barWidth());
   const empty = () => barWidth() - filled();
@@ -227,7 +227,7 @@ function ProgressBar(props: { progress: number; width: number }) {
 
   return (
     <text>
-      <span style={{ fg: colors.primary }}>{bar()}</span>
+      <span style={{ fg: props.color || colors.primary }}>{bar()}</span>
       <span style={{ fg: colors.text }}> {pct()}%</span>
     </text>
   );
@@ -353,191 +353,177 @@ function OverviewView(props: {
   layout: LayoutMode;
 }) {
   const data = () => props.result || props.snapshot;
+  const isComplete = () => !!props.result;
+  const chartWidth = () =>
+    props.layout === "wide" ? Math.floor((props.width - 8) / 2) : props.width - 6;
+
+  const requestsRows = () => [
+    {
+      label: "Total",
+      value: (props.result?.totalRequests ?? props.snapshot?.totalRequests ?? 0).toLocaleString(),
+    },
+    {
+      label: "Success",
+      value: (
+        props.result?.successfulRequests ??
+        props.snapshot?.successfulRequests ??
+        0
+      ).toLocaleString(),
+      color: colors.success,
+    },
+    {
+      label: "Failed",
+      value: (props.result?.failedRequests ?? props.snapshot?.failedRequests ?? 0).toLocaleString(),
+      color:
+        (props.result?.failedRequests ?? props.snapshot?.failedRequests ?? 0) > 0
+          ? colors.error
+          : colors.textMuted,
+    },
+    {
+      label: "RPS",
+      value: (props.result?.requestsPerSecond ?? props.snapshot?.currentRps ?? 0).toFixed(1),
+      color: colors.info,
+    },
+  ];
+
+  const latencyRows = () => [
+    {
+      label: "P50",
+      value: formatLatency(props.result?.latency.p50 ?? props.snapshot?.latencyP50 ?? 0),
+    },
+    {
+      label: "P99",
+      value: formatLatency(props.result?.latency.p99 ?? props.snapshot?.latencyP99 ?? 0),
+    },
+    {
+      label: "Mean",
+      value: formatLatency(props.result?.latency.mean ?? props.snapshot?.latencyMean ?? 0),
+    },
+    {
+      label: "Max",
+      value: formatLatency(props.result?.latency.max ?? props.snapshot?.latencyMax ?? 0),
+      color: colors.warning,
+    },
+  ];
+
+  const dataRows = () => [
+    {
+      label: "Total",
+      value: formatBytes(props.result?.totalBytes ?? props.snapshot?.totalBytes ?? 0),
+    },
+    {
+      label: "Throughput",
+      value: formatThroughput(props.result?.bytesPerSecond ?? props.snapshot?.bytesPerSecond ?? 0),
+    },
+    {
+      label: "Duration",
+      value: formatDuration(props.result?.durationMs ?? props.snapshot?.elapsedMs ?? 0),
+    },
+  ];
+
+  const currentRps = () => props.result?.requestsPerSecond ?? props.snapshot?.currentRps ?? 0;
+  const p99Latency = () => props.result?.latency.p99 ?? props.snapshot?.latencyP99 ?? 0;
+  const successCount = () =>
+    props.result?.successfulRequests ?? props.snapshot?.successfulRequests ?? 0;
+  const failedCount = () => props.result?.failedRequests ?? props.snapshot?.failedRequests ?? 0;
 
   return (
     <Show when={data()} fallback={<text fg={colors.textMuted}>Waiting for data...</text>}>
-      {(_d) => {
-        const isComplete = !!props.result;
-        const chartWidth =
-          props.layout === "wide" ? Math.floor((props.width - 8) / 2) : props.width - 6;
+      <box flexDirection="column" gap={1}>
+        <box
+          flexDirection="row"
+          justifyContent="space-around"
+          border
+          borderStyle="rounded"
+          borderColor={colors.primary}
+          padding={1}
+        >
+          <BigNumber label="RPS" value={currentRps().toFixed(0)} color={colors.success} />
+          <BigNumber
+            label="P99 Latency"
+            value={formatLatency(p99Latency())}
+            color={p99Latency() > 100 ? colors.warning : colors.primary}
+          />
+          <BigNumber
+            label="Success"
+            value={successCount().toLocaleString()}
+            color={colors.success}
+          />
+          <Show when={failedCount() > 0}>
+            <BigNumber
+              label="Failed"
+              value={failedCount().toLocaleString()}
+              color={colors.error}
+            />
+          </Show>
+        </box>
 
-        const requestsRows = [
-          {
-            label: "Total",
-            value: (
-              props.result?.totalRequests ??
-              props.snapshot?.totalRequests ??
-              0
-            ).toLocaleString(),
-          },
-          {
-            label: "Success",
-            value: (
-              props.result?.successfulRequests ??
-              props.snapshot?.successfulRequests ??
-              0
-            ).toLocaleString(),
-            color: colors.success,
-          },
-          {
-            label: "Failed",
-            value: (
-              props.result?.failedRequests ??
-              props.snapshot?.failedRequests ??
-              0
-            ).toLocaleString(),
-            color:
-              (props.result?.failedRequests ?? props.snapshot?.failedRequests ?? 0) > 0
-                ? colors.error
-                : colors.textMuted,
-          },
-          {
-            label: "RPS",
-            value: (props.result?.requestsPerSecond ?? props.snapshot?.currentRps ?? 0).toFixed(1),
-            color: colors.info,
-          },
-        ];
+        <box
+          flexDirection="row"
+          gap={2}
+          border
+          borderStyle="rounded"
+          borderColor={colors.borderMuted}
+          padding={1}
+        >
+          <MetricsPanel title="Requests" rows={requestsRows()} />
+          <MetricsPanel title="Latency" rows={latencyRows()} />
+          <Show when={props.layout !== "compact"}>
+            <MetricsPanel title="Data" rows={dataRows()} />
+          </Show>
+        </box>
 
-        const latencyRows = [
-          {
-            label: "P50",
-            value: formatLatency(props.result?.latency.p50 ?? props.snapshot?.latencyP50 ?? 0),
-          },
-          {
-            label: "P99",
-            value: formatLatency(props.result?.latency.p99 ?? props.snapshot?.latencyP99 ?? 0),
-          },
-          { label: "Mean", value: formatLatency(props.result?.latency.mean ?? 0) },
-          {
-            label: "Max",
-            value: formatLatency(props.result?.latency.max ?? 0),
-            color: colors.warning,
-          },
-        ];
-
-        const dataRows = [
-          { label: "Total", value: formatBytes(props.result?.totalBytes ?? 0) },
-          { label: "Throughput", value: formatThroughput(props.result?.bytesPerSecond ?? 0) },
-          {
-            label: "Duration",
-            value: formatDuration(props.result?.durationMs ?? props.snapshot?.elapsedMs ?? 0),
-          },
-        ];
-
-        const currentRps = props.result?.requestsPerSecond ?? props.snapshot?.currentRps ?? 0;
-        const p99Latency = props.result?.latency.p99 ?? props.snapshot?.latencyP99 ?? 0;
-        const successCount =
-          props.result?.successfulRequests ?? props.snapshot?.successfulRequests ?? 0;
-        const failedCount = props.result?.failedRequests ?? props.snapshot?.failedRequests ?? 0;
-
-        return (
-          <box flexDirection="column" gap={1}>
+        <Show when={props.history.rps.length > 1}>
+          <box flexDirection={props.layout === "wide" ? "row" : "column"} gap={1}>
             <box
-              flexDirection="row"
-              justifyContent="space-around"
-              border
-              borderStyle="rounded"
-              borderColor={colors.primary}
-              padding={1}
-            >
-              <BigNumber label="RPS" value={currentRps.toFixed(0)} color={colors.success} />
-              <BigNumber
-                label="P99 Latency"
-                value={formatLatency(p99Latency)}
-                color={p99Latency > 100 ? colors.warning : colors.primary}
-              />
-              <BigNumber
-                label="Success"
-                value={successCount.toLocaleString()}
-                color={colors.success}
-              />
-              <Show when={failedCount > 0}>
-                <BigNumber
-                  label="Failed"
-                  value={failedCount.toLocaleString()}
-                  color={colors.error}
-                />
-              </Show>
-            </box>
-
-            <box
-              flexDirection="row"
-              gap={2}
+              flexGrow={1}
               border
               borderStyle="rounded"
               borderColor={colors.borderMuted}
               padding={1}
             >
-              <MetricsPanel title="Requests" rows={requestsRows} />
-              <MetricsPanel title="Latency" rows={latencyRows} />
-              <Show when={props.layout !== "compact"}>
-                <MetricsPanel title="Data" rows={dataRows} />
-              </Show>
+              <Sparkline
+                values={props.history.rps}
+                label="RPS Trend"
+                color={colors.success}
+                width={chartWidth()}
+              />
             </box>
-
-            <Show when={props.history.rps.length > 1}>
-              <box flexDirection={props.layout === "wide" ? "row" : "column"} gap={1}>
-                <box
-                  flexGrow={1}
-                  border
-                  borderStyle="rounded"
-                  borderColor={colors.borderMuted}
-                  padding={1}
-                >
-                  <Sparkline
-                    values={props.history.rps}
-                    label="RPS Trend"
-                    color={colors.success}
-                    width={chartWidth}
-                  />
-                </box>
-                <Show when={props.layout === "wide"}>
-                  <box
-                    flexGrow={1}
-                    border
-                    borderStyle="rounded"
-                    borderColor={colors.borderMuted}
-                    padding={1}
-                  >
-                    <Sparkline
-                      values={props.history.latencyP50}
-                      label="P50 Latency"
-                      color={colors.primary}
-                      width={chartWidth}
-                    />
-                  </box>
-                </Show>
+            <Show when={props.layout === "wide"}>
+              <box
+                flexGrow={1}
+                border
+                borderStyle="rounded"
+                borderColor={colors.borderMuted}
+                padding={1}
+              >
+                <Sparkline
+                  values={props.history.latencyP50}
+                  label="P50 Latency"
+                  color={colors.primary}
+                  width={chartWidth()}
+                />
               </box>
             </Show>
-
-            <Show when={isComplete ? props.result : undefined}>
-              {(result) => (
-                <StatusCodes
-                  statusCodes={result().statusCodes}
-                  total={result().totalRequests}
-                  width={props.width}
-                />
-              )}
-            </Show>
-
-            <Show
-              when={
-                isComplete && props.result?.failedRequests && props.result.failedRequests > 0
-                  ? props.result
-                  : undefined
-              }
-            >
-              {(result) => (
-                <ErrorsPanel
-                  errors={result().errors}
-                  total={result().failedRequests}
-                  layout={props.layout}
-                />
-              )}
-            </Show>
           </box>
-        );
-      }}
+        </Show>
+
+        <Show
+          when={
+            isComplete() && props.result?.failedRequests && props.result.failedRequests > 0
+              ? props.result
+              : undefined
+          }
+        >
+          {(result) => (
+            <ErrorsPanel
+              errors={result().errors}
+              total={result().failedRequests}
+              layout={props.layout}
+            />
+          )}
+        </Show>
+      </box>
     </Show>
   );
 }
@@ -636,7 +622,10 @@ function LatencyView(props: {
             marginTop={1}
           >
             <box flexDirection="column">
-              <StatRow label="Min" value={formatLatency(props.result?.latency.min ?? 0)} />
+              <StatRow
+                label="Min"
+                value={formatLatency(props.result?.latency.min ?? props.snapshot?.latencyMin ?? 0)}
+              />
               <StatRow
                 label="P50"
                 value={formatLatency(props.result?.latency.p50 ?? props.snapshot?.latencyP50 ?? 0)}
@@ -653,7 +642,7 @@ function LatencyView(props: {
               />
               <StatRow
                 label="Max"
-                value={formatLatency(props.result?.latency.max ?? 0)}
+                value={formatLatency(props.result?.latency.max ?? props.snapshot?.latencyMax ?? 0)}
                 color={colors.error}
               />
             </box>
@@ -664,7 +653,10 @@ function LatencyView(props: {
           <box flexDirection="column">
             <text fg={colors.secondary}>Statistics</text>
             <box flexDirection="column" marginTop={1}>
-              <StatRow label="Mean" value={formatLatency(props.result?.latency.mean ?? 0)} />
+              <StatRow
+                label="Mean"
+                value={formatLatency(props.result?.latency.mean ?? props.snapshot?.latencyMean ?? 0)}
+              />
               <StatRow label="StdDev" value={formatLatency(props.result?.latency.stddev ?? 0)} />
             </box>
           </box>
@@ -724,7 +716,10 @@ function ThroughputView(props: {
               color={colors.success}
             />
             <StatRow label="Average" value={formatThroughput(avgThroughput())} />
-            <StatRow label="Total" value={formatBytes(props.result?.totalBytes ?? 0)} />
+            <StatRow
+              label="Total"
+              value={formatBytes(props.result?.totalBytes ?? props.snapshot?.totalBytes ?? 0)}
+            />
           </box>
         </box>
       </box>
@@ -777,54 +772,6 @@ function LatencyHistogram(props: { result: BenchmarkResult; width: number }) {
   );
 }
 
-function StatusCodes(props: { statusCodes: Record<number, number>; total: number; width: number }) {
-  const entries = () => Object.entries(props.statusCodes).sort(([a], [b]) => Number(a) - Number(b));
-
-  return (
-    <Show when={entries().length > 0 && props.total > 0}>
-      {(() => {
-        const barWidth = Math.max(20, Math.min(60, props.width - 10));
-        const segments = entries().map(([code, count]) => {
-          const codeNum = Number(code);
-          const color =
-            codeNum < 300 ? colors.success : codeNum < 400 ? colors.warning : colors.error;
-          const ratio = count / props.total;
-          const segmentWidth = Math.max(0, Math.round(ratio * barWidth));
-          return { code, count, color, segmentWidth, ratio };
-        });
-
-        return (
-          <box border borderStyle="rounded" borderColor={colors.borderMuted} padding={1}>
-            <box flexDirection="column">
-              <text fg={colors.secondary}>Status Codes</text>
-              <box flexDirection="row" marginTop={1}>
-                <text>[</text>
-                <For each={segments}>
-                  {(seg) => <text fg={seg.color}>{"█".repeat(seg.segmentWidth)}</text>}
-                </For>
-                <text>]</text>
-              </box>
-              <box flexDirection="row" gap={2} marginTop={1} flexWrap="wrap">
-                <For each={segments}>
-                  {(seg) => (
-                    <text>
-                      <span style={{ fg: seg.color }}>●</span>
-                      <span style={{ fg: colors.text }}> {seg.code}</span>
-                      <span style={{ fg: colors.textMuted }}>
-                        : {seg.count.toLocaleString()} ({(seg.ratio * 100).toFixed(0)}%)
-                      </span>
-                    </text>
-                  )}
-                </For>
-              </box>
-            </box>
-          </box>
-        );
-      })()}
-    </Show>
-  );
-}
-
 function ErrorsPanel(props: { errors: Record<string, number>; total: number; layout: LayoutMode }) {
   const entries = () => Object.entries(props.errors).sort(([, a], [, b]) => b - a);
 
@@ -851,30 +798,54 @@ function ErrorsPanel(props: { errors: Record<string, number>; total: number; lay
   );
 }
 
-function RunningStatus(props: {
+function StatusPanel(props: {
+  phase: Phase;
   progress: number;
   elapsed: number;
   snapshot?: StatsSnapshot;
+  result?: BenchmarkResult;
   width: number;
 }) {
+  const isComplete = () =>
+    props.phase === "complete" || props.phase === "exporting" || props.phase === "editing";
+
+  const statusText = () => (isComplete() ? "✓ Benchmark complete" : "Running benchmark...");
+  const statusColor = () => (isComplete() ? colors.success : colors.info);
+  const borderColor = () => (isComplete() ? colors.success : colors.primary);
+
+  const rps = () => {
+    if (props.result) return props.result.requestsPerSecond;
+    if (props.snapshot) return props.snapshot.currentRps;
+    return 0;
+  };
+
+  const duration = () => {
+    if (props.result) return props.result.durationMs;
+    return props.elapsed;
+  };
+
   return (
     <box
       flexDirection="column"
       border
       borderStyle="rounded"
-      borderColor={colors.primary}
+      borderColor={borderColor()}
       padding={1}
       marginBottom={1}
     >
       <box flexDirection="row" justifyContent="space-between">
-        <text fg={colors.info}>Running benchmark...</text>
+        <text fg={statusColor()}>{statusText()}</text>
         <text fg={colors.textMuted}>
-          {formatDuration(props.elapsed)}
-          {props.snapshot ? ` · ${props.snapshot.currentRps.toFixed(0)} req/s` : ""}
+          {formatDuration(duration())}
+          {` · ${rps().toFixed(0)} req/s`}
         </text>
       </box>
       <box marginTop={1}>
-        <ProgressBar progress={props.progress} width={props.width - 4} />
+        <ProgressBar
+          progress={isComplete() ? 1 : props.progress}
+          width={props.width - 4}
+          color={isComplete() ? colors.success : colors.primary}
+        />
       </box>
     </box>
   );
@@ -905,7 +876,10 @@ function CommandBar(props: {
   return (
     <>
       <Show when={props.phase === "running"}>
-        <box marginTop={1}>
+        <box flexDirection="column" marginTop={1}>
+          <Show when={divider()}>
+            <text fg={colors.textMuted}>{divider()}</text>
+          </Show>
           <text fg={colors.textMuted}>
             {props.layout === "compact"
               ? "[q] stop"
@@ -915,7 +889,10 @@ function CommandBar(props: {
       </Show>
 
       <Show when={props.phase === "exporting"}>
-        <box marginTop={1}>
+        <box flexDirection="column" marginTop={1}>
+          <Show when={divider()}>
+            <text fg={colors.textMuted}>{divider()}</text>
+          </Show>
           <text fg={colors.warning}>[j] JSON [c] CSV [m] Markdown [esc] cancel</text>
         </box>
       </Show>
@@ -955,7 +932,10 @@ function CommandBar(props: {
       </Show>
 
       <Show when={props.phase === "diagnosing"}>
-        <box marginTop={1}>
+        <box flexDirection="column" marginTop={1}>
+          <Show when={divider()}>
+            <text fg={colors.textMuted}>{divider()}</text>
+          </Show>
           <text fg={colors.textMuted}>Running connection diagnostics...</text>
         </box>
       </Show>
@@ -1115,17 +1095,17 @@ function DiagnosticsView(props: {
 }
 
 function MetricContent(props: {
-  view: MetricView;
-  snapshot?: StatsSnapshot;
-  history: MetricHistory;
-  result?: BenchmarkResult;
-  width: number;
-  layout: LayoutMode;
+  view: () => MetricView;
+  snapshot: () => StatsSnapshot | undefined;
+  history: () => MetricHistory;
+  result: () => BenchmarkResult | undefined;
+  width: () => number;
+  layout: () => LayoutMode;
 }) {
   return (
     <>
-      <Show when={props.view === "rps"}>
-        <RpsView
+      <Show when={props.view() === "rps"}>
+        <RpsViewWrapper
           snapshot={props.snapshot}
           history={props.history}
           result={props.result}
@@ -1133,8 +1113,8 @@ function MetricContent(props: {
           layout={props.layout}
         />
       </Show>
-      <Show when={props.view === "latency"}>
-        <LatencyView
+      <Show when={props.view() === "latency"}>
+        <LatencyViewWrapper
           snapshot={props.snapshot}
           history={props.history}
           result={props.result}
@@ -1142,8 +1122,8 @@ function MetricContent(props: {
           layout={props.layout}
         />
       </Show>
-      <Show when={props.view === "throughput"}>
-        <ThroughputView
+      <Show when={props.view() === "throughput"}>
+        <ThroughputViewWrapper
           snapshot={props.snapshot}
           history={props.history}
           result={props.result}
@@ -1151,8 +1131,8 @@ function MetricContent(props: {
           layout={props.layout}
         />
       </Show>
-      <Show when={props.view === "overview"}>
-        <OverviewView
+      <Show when={props.view() === "overview"}>
+        <OverviewViewWrapper
           snapshot={props.snapshot}
           history={props.history}
           result={props.result}
@@ -1161,6 +1141,78 @@ function MetricContent(props: {
         />
       </Show>
     </>
+  );
+}
+
+function RpsViewWrapper(props: {
+  snapshot: () => StatsSnapshot | undefined;
+  history: () => MetricHistory;
+  result: () => BenchmarkResult | undefined;
+  width: () => number;
+  layout: () => LayoutMode;
+}) {
+  return (
+    <RpsView
+      snapshot={props.snapshot()}
+      history={props.history()}
+      result={props.result()}
+      width={props.width()}
+      layout={props.layout()}
+    />
+  );
+}
+
+function LatencyViewWrapper(props: {
+  snapshot: () => StatsSnapshot | undefined;
+  history: () => MetricHistory;
+  result: () => BenchmarkResult | undefined;
+  width: () => number;
+  layout: () => LayoutMode;
+}) {
+  return (
+    <LatencyView
+      snapshot={props.snapshot()}
+      history={props.history()}
+      result={props.result()}
+      width={props.width()}
+      layout={props.layout()}
+    />
+  );
+}
+
+function ThroughputViewWrapper(props: {
+  snapshot: () => StatsSnapshot | undefined;
+  history: () => MetricHistory;
+  result: () => BenchmarkResult | undefined;
+  width: () => number;
+  layout: () => LayoutMode;
+}) {
+  return (
+    <ThroughputView
+      snapshot={props.snapshot()}
+      history={props.history()}
+      result={props.result()}
+      width={props.width()}
+      layout={props.layout()}
+    />
+  );
+}
+
+function OverviewViewWrapper(props: {
+  snapshot: () => StatsSnapshot | undefined;
+  history: () => MetricHistory;
+  result: () => BenchmarkResult | undefined;
+  width: () => number;
+  layout: () => LayoutMode;
+}) {
+  return (
+    <OverviewView
+      snapshot={props.snapshot()}
+      history={props.history()}
+      result={props.result()}
+      width={props.width()}
+      layout={props.layout()}
+    />
   );
 }
 
@@ -1263,36 +1315,31 @@ export function BenchmarkTui() {
       >
         <TabBar currentView={state().view} layout={layout()} />
 
-        <Show when={state().phase === "running" ? state().snapshot : undefined}>
-          {(snapshot) => (
-            <RunningStatus
-              progress={state().progress}
-              elapsed={snapshot().elapsedMs}
-              snapshot={snapshot()}
-              width={dims().width}
-            />
-          )}
-        </Show>
-
-        <Show when={state().phase === "complete"}>
-          <box
-            border
-            borderStyle="rounded"
-            borderColor={colors.success}
-            padding={1}
-            marginBottom={1}
-          >
-            <text fg={colors.success}>✓ Benchmark complete</text>
-          </box>
+        <Show
+          when={
+            state().phase === "running" ||
+            state().phase === "complete" ||
+            state().phase === "exporting" ||
+            state().phase === "editing"
+          }
+        >
+          <StatusPanel
+            phase={state().phase}
+            progress={state().progress}
+            elapsed={state().snapshot?.elapsedMs ?? 0}
+            snapshot={state().snapshot}
+            result={state().result}
+            width={dims().width}
+          />
         </Show>
 
         <MetricContent
-          view={state().view}
-          snapshot={state().snapshot}
-          history={state().history}
-          result={state().result}
-          width={dims().width}
-          layout={layout()}
+          view={() => state().view}
+          snapshot={() => state().snapshot}
+          history={() => state().history}
+          result={() => state().result}
+          width={() => dims().width}
+          layout={layout}
         />
       </Show>
 

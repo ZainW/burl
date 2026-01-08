@@ -56,6 +56,10 @@ export interface StatsSnapshot {
   failedRequests: number;
   currentRps: number;
   bytesPerSecond: number;
+  totalBytes: number;
+  latencyMin: number;
+  latencyMax: number;
+  latencyMean: number;
   latencyP50: number;
   latencyP99: number;
   elapsedMs: number;
