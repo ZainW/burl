@@ -1,0 +1,39 @@
+#compdef burl
+# Zsh completion for burl
+
+_burl() {
+    local -a args
+
+    args=(
+        '1:URL:_urls'
+        '(-c --connections)'{-c,--connections}'[Concurrent connections]:connections:'
+        '(-d --duration)'{-d,--duration}'[Test duration (e.g., 10s, 1m)]:duration:'
+        '(-n --requests)'{-n,--requests}'[Total requests]:requests:'
+        '(-q --qps)'{-q,--qps}'[Rate limit in queries per second]:qps:'
+        '(-t --timeout)'{-t,--timeout}'[Request timeout]:timeout:'
+        '(-w --warmup)'{-w,--warmup}'[Warmup requests]:warmup:'
+        '(-m --method)'{-m,--method}'[HTTP method]:method:(GET POST PUT PATCH DELETE HEAD OPTIONS)'
+        '(-H --header)'{-H,--header}'[Custom header (repeatable)]:header:'
+        '(-b --body)'{-b,--body}'[Request body]:body:'
+        '(-B --body-file)'{-B,--body-file}'[Request body from file]:file:_files'
+        '(-T --content-type)'{-T,--content-type}'[Content-Type header]:content-type:(application/json application/x-www-form-urlencoded text/plain text/html)'
+        '--http1[Force HTTP/1.1]'
+        '--http2[Force HTTP/2]'
+        '(-a --auth)'{-a,--auth}'[Authentication (basic:user:pass or bearer:token)]:auth:'
+        '--llm[LLM output format]:format:(json markdown)'
+        '(-o --output)'{-o,--output}'[Write results to file]:file:_files'
+        '(-f --format)'{-f,--format}'[Output format]:format:(text json csv markdown)'
+        '--no-tui[Disable rich TUI]'
+        '--no-color[Disable colors]'
+        '(-k --insecure)'{-k,--insecure}'[Skip TLS verification]'
+        '--latency-correction[Enable latency correction]'
+        '--diagnose[Run diagnostic mode]'
+        '--upgrade[Upgrade to latest version]'
+        '(-V --version)'{-V,--version}'[Show version]'
+        '(-h --help)'{-h,--help}'[Show help]'
+    )
+
+    _arguments -s -S $args
+}
+
+_burl "$@"
